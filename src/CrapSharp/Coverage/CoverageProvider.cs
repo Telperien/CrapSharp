@@ -10,6 +10,9 @@ namespace CrapSharp.Coverage;
 /// </summary>
 public sealed record CoverageResult(CoverageMap? Map, bool Succeeded, bool RunFailed = false)
 {
+    /// <summary>The Cobertura reports the map was merged from.</summary>
+    public IReadOnlyList<string> Reports { get; init; } = [];
+
     public static readonly CoverageResult NotWanted = new(null, true);
     public static readonly CoverageResult Failed = new(null, false);
 }
@@ -27,7 +30,7 @@ public sealed class CoverageProvider(IProcessRunner processes, TextWriter error)
     {
         CoverageMode.None => CoverageResult.NotWanted,
         CoverageMode.Explicit => Load(options.CoverageReports, "No coverage report given"),
-        CoverageMode.UseExisting => Load(CoverageReportFinder.NewestPerRun(workspace.Root),
+        CoverageMode.UseExisting => Load(CoverageReportFinder.LatestRuns(workspace.Root),
             $"No existing coverage report found under {workspace.Root}; run the tests with coverage first"),
         CoverageMode.Command => RunCommand(options.CoverageCommand!, workspace),
         _ => RunTests(workspace),
@@ -43,7 +46,17 @@ public sealed class CoverageProvider(IProcessRunner processes, TextWriter error)
         var runFailed = false;
         for (var i = 0; i < workspace.TestProjects.Count; i++)
             runFailed |= RunTestProject(workspace.TestProjects[i], Path.Combine(resultsRoot, i.ToString()), workspace.Root);
-        return Load(CoverageReportFinder.NewestPerRun(resultsRoot), NoReportFromDotnetTest) with { RunFailed = runFailed };
+        WarnAboutSilentProjects(workspace.TestProjects, resultsRoot);
+        return Load(CoverageReportFinder.All(resultsRoot), NoReportFromDotnetTest) with { RunFailed = runFailed };
+    }
+
+    // A test project that wrote no report (no collector, tests skipped) leaves what only it covers at 0 %.
+    private void WarnAboutSilentProjects(IReadOnlyList<string> testProjects, string resultsRoot)
+    {
+        for (var i = 0; i < testProjects.Count; i++)
+            if (CoverageReportFinder.All(Path.Combine(resultsRoot, i.ToString())).Count == 0)
+                error.WriteLine($"warning: {Path.GetFileName(testProjects[i])} produced no coverage report; "
+                    + "what only its tests cover is scored 0 % (does it reference coverlet.collector?)");
     }
 
     /// <summary>True when the run failed.</summary>
@@ -103,7 +116,7 @@ public sealed class CoverageProvider(IProcessRunner processes, TextWriter error)
             var merged = new CoverageMap();
             foreach (var report in reports)
                 merged.Merge(CoberturaParser.ParseFile(report));
-            return new CoverageResult(merged, true);
+            return new CoverageResult(merged, true) { Reports = reports };
         }
         catch (Exception e) when (e is IOException or XmlException)
         {

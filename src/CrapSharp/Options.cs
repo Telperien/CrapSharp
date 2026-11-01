@@ -2,7 +2,7 @@ using System.Globalization;
 
 namespace CrapSharp;
 
-/// <summary>Where the coverage comes from. When several options are given, the first match in this order wins.</summary>
+/// <summary>Where the coverage comes from. Giving several coverage options is an error.</summary>
 public enum CoverageMode
 {
     /// <summary>--no-coverage: complexity only.</summary>
@@ -37,7 +37,7 @@ public sealed record Options(
         Scores every C# method, worst first: CRAP = CC^2 * (1 - coverage)^3 + CC.
         path: a folder, .sln, .csproj or .cs file (default: the current folder).
 
-        Coverage (default: run `dotnet test` with coverlet on every test project):
+        Coverage (default: run `dotnet test` with coverlet on every test project; give at most one of these):
           --coverage <report.xml>     use this Cobertura report (repeatable); run nothing
           --use-existing-coverage     reuse the reports left by an earlier test run
           --coverage-command "<cmd>"  run this command and use the Cobertura reports it writes
@@ -45,9 +45,11 @@ public sealed record Options(
 
         Selection:
           --changed                   only the .cs files git sees as modified, added or untracked
+                                      (none changed: exit 0, nothing scored)
           --filter <fragment>         only the files whose path contains the fragment
+                                      (no match: exit 1). With either, the JSON says its scope is partial.
 
-          --threshold <N>             exit code 2 unless every method scores below N
+          --threshold <N>             exit code 2 unless every method scores below N (N finite, above 0)
           -h, --help                  show this help
 
         Exit codes: 0 ok, 1 error, 2 threshold not met, 3 tests or coverage command failed.
@@ -59,6 +61,9 @@ public sealed record Options(
 
     private static readonly HashSet<string> Flags =
         ["--no-coverage", "--use-existing-coverage", "--changed", "--help", "-h"];
+
+    private static readonly string[] CoverageSourceOptions =
+        ["--no-coverage", "--coverage", "--coverage-command", "--use-existing-coverage"];
 
     private static readonly HashSet<string> ValueOptions = ["--coverage", "--threshold", "--coverage-command", "--filter"];
 
@@ -76,7 +81,10 @@ public sealed record Options(
         }
     }
 
-    /// <summary>Throws OptionsException on an unknown option, a missing value, a second path or a non-numeric threshold.</summary>
+    /// <summary>
+    /// Throws OptionsException on an unknown option, a missing value, a second path, several coverage sources
+    /// or a threshold that is not a finite number above 0.
+    /// </summary>
     public static Options Parse(string[] args)
     {
         var flags = new HashSet<string>();
@@ -85,6 +93,7 @@ public sealed record Options(
         Tokenize(args, flags, values, positionals);
         if (positionals.Count > 1)
             throw new OptionsException($"Only one path can be given, got: {string.Join(", ", positionals)}");
+        RejectSeveralCoverageSources(flags, values);
         return new Options(
             positionals.SingleOrDefault() ?? ".",
             values.GetValueOrDefault("--coverage") ?? [],
@@ -113,8 +122,21 @@ public sealed record Options(
         }
     }
 
+    // A known option right after a valued one means the value was forgotten (a value may still start with '-').
     private static string ValueAfter(string[] args, int index) =>
-        index < args.Length ? args[index] : throw new OptionsException($"{args[index - 1]} expects a value");
+        index < args.Length && !IsOption(args[index])
+            ? args[index]
+            : throw new OptionsException($"{args[index - 1]} expects a value");
+
+    private static bool IsOption(string arg) => Flags.Contains(arg) || ValueOptions.Contains(arg);
+
+    // Picking one silently could hide the coverage the user meant to gate on.
+    private static void RejectSeveralCoverageSources(HashSet<string> flags, Dictionary<string, List<string>> values)
+    {
+        var given = CoverageSourceOptions.Where(option => flags.Contains(option) || values.ContainsKey(option)).ToList();
+        if (given.Count > 1)
+            throw new OptionsException($"Choose one coverage source, got: {string.Join(", ", given)}");
+    }
 
     private static void AddValue(Dictionary<string, List<string>> values, string option, string value)
     {
@@ -130,8 +152,9 @@ public sealed record Options(
     {
         if (LastValue(values, "--threshold") is not { } text)
             return null;
-        if (double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var threshold))
+        if (double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var threshold)
+            && double.IsFinite(threshold) && threshold > 0)
             return threshold;
-        throw new OptionsException($"--threshold expects a number, got '{text}'");
+        throw new OptionsException($"--threshold expects a finite number above 0, got '{text}'");
     }
 }

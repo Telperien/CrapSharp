@@ -86,6 +86,37 @@ public class JsonAndThresholdTests
     }
 
     [Fact]
+    public void JsonKeepsTheRawScoreTheVerdictIsBasedOn()
+    {
+        var method = new MethodComplexity("C.M()", File1, 1, 2, 9);
+        using var doc = JsonDocument.Parse(JsonReportWriter.Serialize([new MethodReport(method, 0.99999, 9.999)]));
+        var entry = doc.RootElement.GetProperty("entries")[0];
+        Assert.Equal(9.999, entry.GetProperty("crapRaw").GetDouble());
+        Assert.Equal(9.99, entry.GetProperty("crap").GetDouble());
+    }
+
+    [Fact]
+    public void JsonStatesTheScopeAndWhereTheCoverageCameFrom()
+    {
+        var context = new ReportContext(Changed: false, Filter: "Orders", CoverageMode.Explicit, ["a.xml", "b.xml"], FilesAnalyzed: 3);
+        using var doc = JsonDocument.Parse(JsonReportWriter.Serialize(Reports(withCoverage: true), context));
+        var scope = doc.RootElement.GetProperty("scope");
+        Assert.False(scope.GetProperty("complete").GetBoolean());
+        Assert.Equal("Orders", scope.GetProperty("filter").GetString());
+        Assert.Equal(3, scope.GetProperty("files").GetInt32());
+        var coverage = doc.RootElement.GetProperty("coverage");
+        Assert.Equal("Explicit", coverage.GetProperty("source").GetString());
+        Assert.Equal(["a.xml", "b.xml"], coverage.GetProperty("reports").EnumerateArray().Select(r => r.GetString()));
+    }
+
+    [Theory]
+    [InlineData(false, null, true)]
+    [InlineData(true, null, false)]
+    [InlineData(false, "x", false)]
+    public void OnlyAnUnfilteredRunIsACompleteReport(bool changed, string? filter, bool complete) =>
+        Assert.Equal(complete, new ReportContext(changed, filter, CoverageMode.Run, [], 1).Complete);
+
+    [Fact]
     public void ParseReadsTheThreshold()
     {
         Assert.Equal(10.5, Options.Parse(["--threshold", "10.5", "src"]).Threshold);
@@ -96,6 +127,6 @@ public class JsonAndThresholdTests
     public void ParseRejectsANonNumericThreshold()
     {
         var e = Assert.Throws<OptionsException>(() => Options.Parse(["--threshold", "abc"]));
-        Assert.Contains("--threshold expects a number", e.Message);
+        Assert.Contains("--threshold expects a finite number above 0", e.Message);
     }
 }

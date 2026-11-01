@@ -1,0 +1,9 @@
+<Project>
+
+  <!-- Declares the fixture folder as the source root, as SourceLink does in a git repository:
+       with ContinuousIntegrationBuild the compiler then maps its path to /_/ in the pdb. -->
+  <ItemGroup>
+    <SourceRoot Include="$(MSBuildThisFileDirectory)" />
+  </ItemGroup>
+
+</Project>

@@ -38,22 +38,61 @@ public class OptionsAndDiscoveryTests : IDisposable
     public void ParseReadsFlagsAndValuedOptions()
     {
         var options = Options.Parse(
-            ["--changed", "--use-existing-coverage", "--filter", "Orders", "--coverage-command", "make cover", "--no-coverage"]);
+            ["--changed", "--use-existing-coverage", "--filter", "Orders", "--threshold", "8"]);
         Assert.True(options.Changed);
         Assert.True(options.UseExistingCoverage);
-        Assert.True(options.NoCoverage);
         Assert.Equal("Orders", options.Filter);
-        Assert.Equal("make cover", options.CoverageCommand);
+        Assert.Equal(8, options.Threshold);
+        Assert.Equal("make cover", Options.Parse(["--coverage-command", "make cover"]).CoverageCommand);
+        Assert.True(Options.Parse(["--no-coverage"]).NoCoverage);
     }
 
     [Theory]
     [InlineData(new string[0], CoverageMode.Run)]
     [InlineData(new[] { "--use-existing-coverage" }, CoverageMode.UseExisting)]
-    [InlineData(new[] { "--coverage-command", "c", "--use-existing-coverage" }, CoverageMode.Command)]
-    [InlineData(new[] { "--coverage", "r.xml", "--coverage-command", "c" }, CoverageMode.Explicit)]
-    [InlineData(new[] { "--coverage", "r.xml", "--no-coverage" }, CoverageMode.None)]
-    public void CoverageModeFollowsTheOptionPriority(string[] args, CoverageMode expected) =>
+    [InlineData(new[] { "--coverage-command", "c" }, CoverageMode.Command)]
+    [InlineData(new[] { "--coverage", "r.xml", "--coverage", "s.xml" }, CoverageMode.Explicit)]
+    [InlineData(new[] { "--no-coverage" }, CoverageMode.None)]
+    public void CoverageModeFollowsTheOptionGiven(string[] args, CoverageMode expected) =>
         Assert.Equal(expected, Options.Parse(args).Mode);
+
+    [Theory]
+    [InlineData("--coverage-command", "c", "--use-existing-coverage")]
+    [InlineData("--coverage", "r.xml", "--coverage-command", "c")]
+    [InlineData("--coverage", "r.xml", "--no-coverage")]
+    [InlineData("--no-coverage", "--use-existing-coverage")]
+    public void SeveralCoverageSourcesAreRejectedInsteadOfPickingOneSilently(params string[] args)
+    {
+        var e = Assert.Throws<OptionsException>(() => Options.Parse(args));
+        Assert.StartsWith("Choose one coverage source", e.Message);
+    }
+
+    [Theory]
+    [InlineData("NaN")]
+    [InlineData("Infinity")]
+    [InlineData("-Infinity")]
+    [InlineData("0")]
+    [InlineData("-5")]
+    [InlineData("abc")]
+    public void AThresholdThatIsNotAFinitePositiveNumberIsRejected(string text)
+    {
+        var e = Assert.Throws<OptionsException>(() => Options.Parse(["--threshold", text]));
+        Assert.Contains("finite number above 0", e.Message);
+    }
+
+    [Fact]
+    public void AFractionalThresholdIsAccepted() => Assert.Equal(9.5, Options.Parse(["--threshold", "9.5"]).Threshold);
+
+    [Theory]
+    [InlineData("--threshold")]
+    [InlineData("--filter")]
+    [InlineData("--coverage")]
+    [InlineData("--coverage-command")]
+    public void AValuedOptionFollowedByAnotherOptionHasNoValue(string option)
+    {
+        var e = Assert.Throws<OptionsException>(() => Options.Parse([option, "--changed"]));
+        Assert.Equal($"{option} expects a value", e.Message);
+    }
 
     [Fact]
     public void AValuedOptionWithoutValueIsRejected()

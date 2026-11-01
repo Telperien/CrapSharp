@@ -164,6 +164,70 @@ public class CoverageProviderTests
     }
 
     [Fact]
+    public void UseExistingKeepsEveryReportOfTheNewestRunSoNoTargetFrameworkIsLost()
+    {
+        using var ws = new TempWorkspace();
+        var source = ws.Path_("Foo.cs");
+        var net9 = ws.Write("tests/T/TestResults/a/coverage.cobertura.xml", TempWorkspace.CoberturaXml(source, (1, 1), (2, 0)));
+        var net10 = ws.Write("tests/T/TestResults/b/coverage.cobertura.xml", TempWorkspace.CoberturaXml(source, (1, 0), (2, 1)));
+        var stale = ws.Write("tests/T/TestResults/c/coverage.cobertura.xml", TempWorkspace.CoberturaXml(source, (3, 1)));
+        File.SetLastWriteTimeUtc(stale, DateTime.UtcNow.AddHours(-3));
+        File.SetLastWriteTimeUtc(net9, DateTime.UtcNow.AddSeconds(-30));
+        File.SetLastWriteTimeUtc(net10, DateTime.UtcNow);
+
+        var (result, _) = Obtain(new Options(ws.Root, [], UseExistingCoverage: true), new Workspace(ws.Root, [], []), new FakeProcessRunner());
+
+        Assert.Equal(2, result.Reports.Count);
+        Assert.Equal(1.0, result.Map!.CoverageOf(source, 1, 2));
+    }
+
+    [Fact]
+    public void ADefaultRunMergesTheReportsOfEveryTargetFrameworkOfATestProject()
+    {
+        using var ws = new TempWorkspace();
+        var (source, _) = ws.CreateSolution();
+        var runner = new FakeProcessRunner((_, args, _) =>
+        {
+            var results = ArgAfter(args, "--results-directory");
+            foreach (var (guid, hit) in new[] { ("net9", (6, 1)), ("net10", (7, 1)) })
+            {
+                var report = Path.Combine(results, guid, "coverage.cobertura.xml");
+                Directory.CreateDirectory(Path.GetDirectoryName(report)!);
+                File.WriteAllText(report, TempWorkspace.CoberturaXml(source, hit));
+            }
+            return new ProcessResult(0, "", "");
+        });
+
+        var (result, _) = Obtain(new Options(ws.Root, []), ProjectDiscovery.Discover(ws.Root), runner);
+
+        Assert.Equal(2, result.Reports.Count);
+        Assert.Equal(1.0, result.Map!.CoverageOf(source, 6, 7));
+    }
+
+    [Fact]
+    public void ATestProjectThatProducedNoReportAmongSeveralIsNamedInAWarning()
+    {
+        using var ws = new TempWorkspace();
+        var (source, _) = ws.CreateSolution();
+        ws.Write("tests/Other.Tests/Other.Tests.csproj", "<Project><ItemGroup><PackageReference Include=\"Microsoft.NET.Test.Sdk\" /></ItemGroup></Project>");
+        var runner = new FakeProcessRunner((_, args, _) =>
+        {
+            if (args[1].EndsWith("Other.Tests.csproj"))
+                return new ProcessResult(0, "", "");
+            var report = Path.Combine(ArgAfter(args, "--results-directory"), "g", "coverage.cobertura.xml");
+            Directory.CreateDirectory(Path.GetDirectoryName(report)!);
+            File.WriteAllText(report, TempWorkspace.CoberturaXml(source, (6, 1)));
+            return new ProcessResult(0, "", "");
+        });
+
+        var (result, errors) = Obtain(new Options(ws.Root, []), ProjectDiscovery.Discover(ws.Root), runner);
+
+        Assert.True(result.Succeeded);
+        Assert.Contains("warning: Other.Tests.csproj produced no coverage report", errors);
+        Assert.DoesNotContain("App.Tests.csproj produced no coverage report", errors);
+    }
+
+    [Fact]
     public void UseExistingWithoutAnyReportIsAnError()
     {
         using var ws = new TempWorkspace();

@@ -33,59 +33,84 @@ public sealed class App(IProcessRunner processes, TextWriter output, TextWriter 
 
     public int Run(Options options)
     {
-        if (!File.Exists(options.Path) && !Directory.Exists(options.Path))
-            return Fail($"Path not found: {options.Path}");
-        if (options.Threshold is not null && options.Mode == CoverageMode.None)
-            return Fail("--threshold needs coverage data; remove --no-coverage");
+        if (Invalid(options) is { } problem)
+            return Fail(problem);
         var workspace = ProjectDiscovery.Discover(options.Path);
-        var files = SelectFiles(workspace, options);
-        if (files is null)
-            return ExitCodes.Error;
+        var (files, earlyExit) = Select(workspace, options);
+        if (earlyExit is { } code)
+            return code;
         var coverage = new CoverageProvider(processes, error).Obtain(options, workspace);
-        if (!coverage.Succeeded)
+        return coverage.Succeeded ? Score(options, workspace, files, coverage) : ExitCodes.Error;
+    }
+
+    private static string? Invalid(Options options)
+    {
+        if (!File.Exists(options.Path) && !Directory.Exists(options.Path))
+            return $"Path not found: {options.Path}";
+        return options.Threshold is not null && options.Mode == CoverageMode.None
+            ? "--threshold needs coverage data; remove --no-coverage"
+            : null;
+    }
+
+    private int Score(Options options, Workspace workspace, IReadOnlyList<string> files, CoverageResult coverage)
+    {
+        var methods = files.SelectMany(file => ComplexityCalculator.Analyze(File.ReadAllText(file), file)).ToList();
+        if (coverage.Map is { } map && !CheckCoverage(methods, workspace, map))
             return ExitCodes.Error;
-        if (coverage.Map is { } map && !CheckCoverage(files, workspace, map))
-            return ExitCodes.Error;
-        var thresholdExitCode = Report(options, workspace, files, coverage.Map);
+        var context = new ReportContext(options.Changed, options.Filter, options.Mode, coverage.Reports, files.Count);
+        var thresholdExitCode = Report(options, workspace, methods, coverage.Map, context);
         return coverage.RunFailed ? TestsFailed() : thresholdExitCode;
     }
 
-    private IReadOnlyList<string>? SelectFiles(Workspace workspace, Options options)
+    // ExitCode is set when there is nothing (more) to do: an error, or a selection that is empty on purpose.
+    private (IReadOnlyList<string> Files, int? ExitCode) Select(Workspace workspace, Options options)
     {
-        IReadOnlyList<string> files = workspace.SourceFiles;
-        if (options.Filter is not null)
-            files = files.Where(file => MatchesFilter(file, options.Filter)).ToList();
-        if (!options.Changed)
-            return files;
+        if (workspace.SourceFiles.Count == 0)
+            return ([], Fail($"no production C# source file found under {workspace.Root}"));
+        var files = options.Filter is null
+            ? workspace.SourceFiles
+            : workspace.SourceFiles.Where(file => MatchesFilter(file, options.Filter)).ToList();
+        if (files.Count == 0)
+            return ([], Fail($"--filter '{options.Filter}' matches none of the {workspace.SourceFiles.Count} source file(s)"));
+        return options.Changed ? KeepChanged(workspace, files) : (files, null);
+    }
+
+    // Nothing changed is a legitimate empty selection (success); a typo in --filter is not (see Select).
+    private (IReadOnlyList<string> Files, int? ExitCode) KeepChanged(Workspace workspace, IReadOnlyList<string> files)
+    {
         try
         {
             var changed = new ChangedFiles(processes).Find(workspace.Root);
-            return files.Where(changed.Contains).ToList();
+            var kept = files.Where(changed.Contains).ToList();
+            if (kept.Count > 0)
+                return (kept, null);
+            error.WriteLine("no changed C# source file to score");
+            return (kept, ExitCodes.Ok);
         }
         catch (InvalidOperationException e)
         {
-            error.WriteLine(e.Message);
-            return null;
+            return ([], Fail(e.Message));
         }
     }
 
     private static bool MatchesFilter(string file, string fragment) =>
         file.Replace('\\', '/').Contains(fragment.Replace('\\', '/'), StringComparison.OrdinalIgnoreCase);
 
-    private int Report(Options options, Workspace workspace, IReadOnlyList<string> files, CoverageMap? coverage)
+    private int Report(Options options, Workspace workspace, IReadOnlyList<MethodComplexity> methods, CoverageMap? coverage, ReportContext context)
     {
-        var methods = files.SelectMany(file => ComplexityCalculator.Analyze(File.ReadAllText(file), file)).ToList();
         var reports = MethodReport.Build(methods, coverage);
         output.Write(ReportFormatter.Table(reports));
         if (coverage is not null)
         {
-            JsonReportWriter.Write(reports, Path.Combine(workspace.Root, ".metrics", "crap.json"));
+            JsonReportWriter.Write(reports, Path.Combine(workspace.Root, ".metrics", "crap.json"), context);
         }
         return ThresholdExitCode(options.Threshold, reports);
     }
 
-    private bool CheckCoverage(IReadOnlyList<string> files, Workspace workspace, CoverageMap coverage)
+    // Only files with a measurable member count: a file of constants has nothing the coverage could say about it.
+    private bool CheckCoverage(IReadOnlyList<MethodComplexity> methods, Workspace workspace, CoverageMap coverage)
     {
+        var files = methods.Select(method => method.FilePath).Distinct(PathComparison.Comparer).ToList();
         if (files.Count == 0)
             return true;
         var missing = files.Where(file => !coverage.Contains(file)).ToList();

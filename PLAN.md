@@ -2,7 +2,7 @@
 
 > À relire par une autre IA / un humain avant de critiquer ou de continuer le travail.
 > État détaillé et mode d'emploi : [PROGRESS.md](PROGRESS.md). Texte intégral des reviews : [REVIEWS.md](REVIEWS.md).
-> Dernière mise à jour : 2026-11-01, après une troisième revue du plan (points ajoutés aux étapes 6 et 7).
+> Dernière mise à jour : 2026-11-01, étape 6 réalisée (fixtures réelles, tests de bout en bout) et trous de la review 3 comblés ; en attente de relecture.
 
 ## 1. Contexte
 
@@ -31,18 +31,21 @@ Le skill ne donne **aucune ligne de commande** pour ces outils.
 **Skill existant `crap-score`** ([dotnet/skills](https://github.com/dotnet/skills), lu via skillselion, pas sur GitHub) :
 consignes sans outil exécutable (l'IA compte elle-même les points de décision), seuils 5 / 15 / 30, sans code de retour.
 Il ne remplace pas CrapSharp. Idée à reprendre dans notre skill : la couverture nécessaire pour passer sous un seuil
-vaut `1 − ((seuil − CC) / CC²)^(1/3)` si CC < seuil (si CC ≥ seuil, seul un découpage peut aider).
+vaut `1 − ((seuil − CC) / CC²)^(1/3)` si CC < seuil (si CC ≥ seuil, il faut réduire CC par simplification ou extraction).
 
 ## 2. Objectif et périmètre
 
 **Objectif final : un équivalent .NET d'ub-mode**, c'est-à-dire un skill de discipline adapté à .NET qui appelle des
-contrôles déterministes. Il se construit en trois phases.
+contrôles déterministes. Il doit fonctionner sans Spec Kit, depuis la ligne de commande, la CI et plusieurs agents
+capables d'accéder au dépôt et d'exécuter les outils. L'intégration Spec Kit est un usage prévu à terme.
 
 | Phase | Contenu | État |
 |---|---|---|
-| A | Outil `crapsharp` (CRAP par méthode), fiable et validé | en cours (étapes 1 à 5 faites, 6 et 7 à faire) |
-| B | Skill complet (discipline ub-mode + `crapsharp` + **Stryker.NET** pour les mutations), packaging | à faire |
-| C | Contrôle de duplication (choix d'outil à faire) | à faire |
+| A | Outil `crapsharp` (CRAP par méthode), fiable et validé | en cours (étapes 1 à 6 faites, 6 à relire, 7 à faire) |
+| B | Skill portable (discipline ub-mode + `crapsharp` + **Stryker.NET** pour les mutations), packaging | à faire |
+| C | Contrôle de duplication : choix, intégration et validation | à faire |
+| D | Distribution et essai de bout en bout : CLI/CI autonomes, skill utilisable par plusieurs agents | à faire |
+| E | Adaptateur Spec Kit, sans dépendance du cœur à Spec Kit | à terme |
 
 Pour les mutations, on utilise **Stryker.NET** tel quel, un outil existant et mature : pas de réécriture.
 
@@ -52,7 +55,9 @@ Pour les mutations, on utilise **Stryker.NET** tel quel, un outil existant et ma
 2. **Skill** (`skill/<nom>/SKILL.md`, nom à confirmer, voir §7) : la discipline d'ub-mode reformulée pour .NET
    (texte original, car ub-mode n'a pas de licence), avec les commandes exactes de `crapsharp` et de Stryker.NET.
 3. **Tests** : tests unitaires xUnit, plus des tests de bout en bout sur de vraies mini-solutions avec coverlet.
-4. Plus tard : contrôle de duplication.
+4. **Contrôle de duplication** utilisable depuis le skill et en CI, avec un verdict reproductible.
+5. **Guide d'usage autonome** : installation, CLI, CI et skill pour les environnements d'agent vérifiés.
+6. À terme : **adaptateur Spec Kit** et exemple exécutable sur un vrai projet .NET.
 
 ## 4. Conventions de mesure (spécification)
 
@@ -100,8 +105,8 @@ différer de Visual Studio ou de ReportGenerator ; l'étape 7 mesure ces écarts
   première à la dernière instruction (le compilateur en fait un seul `Main`).
 - **Exclus** : membres portant `[ExcludeFromCodeCoverage]` ou `[ExcludeFromCoverage]`, sur le membre, sur sa
   propriété ou son événement, ou sur un type englobant (nom simple, suffixé `Attribute` ou qualifié). Coverlet les
-  retire de son rapport par défaut : sans cette règle, ils seraient notés à 0 %. *Comportement de coverlet à confirmer
-  sur fixture réelle (étape 6).*
+  retire de son rapport par défaut : sans cette règle, ils seraient notés à 0 %. **Confirmé** sur la fixture `excluded`
+  (coverlet 6.0.0) : un membre, une propriété et un type exclus sont absents du Cobertura comme du tableau.
 - **Fichiers** : les `.cs` des dossiers de projets non-tests, hors `bin`, `obj`, `.git`, `node_modules`, et hors
   `*.g.cs`, `*.generated.cs`, `*.designer.cs`.
 - **Non mesuré, connu** : lambdas dans les initialiseurs de champs ou de propriétés ; code dans les branches `#if`
@@ -115,12 +120,25 @@ différer de Visual Studio ou de ReportGenerator ; l'étape 7 mesure ces écarts
   **approximation** : elle inclut les lambdas et fonctions locales du membre ; deux membres sur une même ligne se
   partagent les mêmes lignes.
 - Membre sans aucune ligne rapportée = 0 % (règle de crapper).
-- Plusieurs rapports : fusion, on garde le maximum de hits par ligne.
+- Plusieurs rapports : fusion, on garde le maximum de hits par ligne. Un `dotnet test` de projet multi-cible écrit un
+  rapport par framework : par défaut l'outil vide `.metrics/coverage` avant de lancer les tests et lit **tous** les
+  rapports qui s'y trouvent. Avec `--use-existing-coverage`, il garde pour chaque dossier de résultats les rapports
+  écrits dans les 10 minutes qui précèdent le plus récent (un même run) ; un run plus ancien est écarté.
+- Un projet de tests qui réussit sans produire de rapport (pas de `coverlet.collector`, par exemple) : avertissement qui
+  le nomme ; ce que seuls ses tests couvrent est noté 0 % (une couverture manquante ne fait que relever les scores).
+  Si aucun projet de tests ne produit de rapport : erreur (code 1).
+- Limites mesurées sur fixtures (étape 6) : une ligne de continuation d'une instruction qui crée un lambda peut être
+  rapportée touchée alors que le corps du lambda n'a pas tourné (`};`, fixture `closures`) ; deux membres sur la même
+  ligne partagent le même résultat, donc un membre jamais appelé peut sembler couvert (fixture `sameline`).
 - Couverture des **branches** (`condition-coverage`) : ignorée (lignes uniquement).
 - Si certains fichiers analysés sont absents du rapport : leurs membres restent à 0 % et un avertissement nomme les
   projets concernés. Un projet de production qu'aucun test n'exécute est un cas normal de cette règle.
 - Si **aucun** fichier analysé n'apparaît dans les rapports : erreur (code 1, sans rapport produit). Vérifier notamment
-  les chemins `/_/…` des builds déterministes. Une sélection volontairement vide reste un cas distinct.
+  les chemins `/_/…` des builds déterministes. Coverlet 6.0.0 remet par défaut les chemins réels dans son rapport ;
+  seul `DeterministicReport=true` y garde les chemins `/_/…` (fixtures `deterministic` et `deterministic-paths`).
+- Sélection vide : aucun fichier de production trouvé → code 1 ; `--filter` qui ne correspond à rien → code 1 (faute
+  de frappe probable) ; `--changed` sans aucun fichier modifié → code 0, rien n'est lancé et le JSON précédent est
+  conservé. Un rapport `--changed` / `--filter` porte `scope.complete = false` dans le JSON.
 
 ### 4.5 Codes de sortie
 
@@ -131,8 +149,16 @@ différer de Visual Studio ou de ReportGenerator ; l'étape 7 mesure ces écarts
 | 2 | `--threshold N` : au moins une méthode à N ou plus | oui |
 | 3 | `dotnet test` ou la commande de couverture a échoué : couverture peut-être incomplète | oui |
 
-Priorité si plusieurs cas s'appliquent : 1, puis 3, puis 2. Options inconnues, valeur manquante ou second chemin :
-code 1, avec un renvoi vers `--help`.
+Priorité si plusieurs cas s'appliquent : 1, puis 3, puis 2. Options inconnues, valeur manquante (y compris une option
+connue à la place de la valeur), second chemin, seuil qui n'est pas un nombre fini supérieur à 0, ou plusieurs sources
+de couverture (`--coverage`, `--coverage-command`, `--use-existing-coverage`, `--no-coverage`) : code 1, avec un renvoi
+vers `--help`.
+
+### 4.6 JSON (`.metrics/crap.json`)
+
+`scope` (`complete`, `changed`, `filter`, `files`), `coverage` (`source`, `reports` : chemins des Cobertura utilisés) et
+`entries`. Chaque entrée porte `crap` et `coverage` **tronqués** pour l'affichage, et `crapRaw`, le score exact
+comparé au seuil.
 
 ## 5. Architecture
 
@@ -146,9 +172,11 @@ src/CrapSharp/                 net10.0, RollForward=Major, Roslyn (Microsoft.Cod
   SourceDiscovery.cs, PathComparison.cs
   Complexity/                  ComplexityCalculator, DecisionCounter, MemberNaming, MethodComplexity, CoverageExclusion
   Coverage/                    CoberturaParser, CoverageMap, CoverageReportFinder, CoverageProvider
-  Scoring/                     CrapCalculator, MethodReport, ReportFormatter, JsonReportWriter, ThresholdCheck, Truncation
+  Scoring/                     CrapCalculator, MethodReport, ReportFormatter, JsonReportWriter, ReportContext, ThresholdCheck, Truncation
   Projects/ProjectDiscovery.cs, Git/ChangedFiles.cs, Processes/ (IProcessRunner, SystemProcessRunner)
-tests/CrapSharp.Tests/         xUnit (127 tests), FakeProcessRunner, TempWorkspace
+tests/CrapSharp.Tests/         xUnit (155 tests rapides + 14 de bout en bout, voir étape 6), FakeProcessRunner, TempWorkspace
+tests/CrapSharp.Tests/EndToEnd/ outil publié lancé sur tests/fixtures (CRAPSHARP_E2E=1)
+tests/fixtures/                mini-solutions réelles ; projets stockés en *.csproj.template
 skill/<nom>/SKILL.md           phase B
 ```
 
@@ -161,12 +189,14 @@ skill/<nom>/SKILL.md           phase B
 | 3 | Formule, tableau, `.metrics/crap.json`, `--threshold` | fait |
 | 4 | CLI : lancement de `dotnet test`, détection des projets, `--changed`, `--filter`, `--coverage-command`… | fait |
 | 5 | Corrections issues des reviews 1 et 2 (détail en §9) | **fait** |
-| 6 | **Fixtures réelles et tests de bout en bout** (détail ci-dessous) | **à faire, prochaine étape** |
+| 6 | **Fixtures réelles et tests de bout en bout** (détail ci-dessous) | **fait, à relire** (reste : voir ci-dessous) |
 | 7 | Validation indépendante des scores attendus sur les fixtures ; comparaison complémentaire avec ReportGenerator et évaluation de son éventuelle réutilisation | à faire |
-| 8 | Skill complet (phase B) : discipline ub-mode pour .NET, `crapsharp`, Stryker.NET ; README | à faire |
-| 9 | Packaging `dotnet tool` (`PackAsTool`, `ToolCommandName=crapsharp`), essai d'installation locale | à faire |
+| 8 | Skill portable (phase B) : discipline ub-mode pour .NET, `crapsharp`, Stryker.NET ; politique d'exécution des mutations ; README | à faire |
+| 9 | Packaging `dotnet tool` (`PackAsTool`, `ToolCommandName=crapsharp`), installation locale et commandes du skill vérifiées | à faire |
 | 10 | Support des projets sur Microsoft.Testing.Platform (si l'étape 6 confirme le problème) | à faire |
-| 11 | Contrôle de duplication (phase C) : choisir entre un outil existant (ex. jscpd) et une brique Roslyn | à faire |
+| 11 | Contrôle de duplication (phase C) : choisir entre un outil existant (ex. jscpd) et une brique Roslyn, puis l'intégrer et le valider | à faire |
+| 12 | Essai de livraison (phase D) : installation reproductible, CLI/CI, skill dans plusieurs agents et pilote sur un projet .NET réel | à faire |
+| 13 | Adaptateur Spec Kit (phase E) : constitution, workflow et exemple de projet | à terme |
 
 **Étape 6 en détail.** Des mini-solutions dans `tests/fixtures/`, chacune avec un vrai projet de tests et coverlet.
 L'outil généré par **`dotnet publish`** est lancé dessus (pas `dotnet run`, qui verrouille la DLL sous Windows), et on vérifie le tableau,
@@ -212,36 +242,87 @@ métriques fournies par le rapport d'entrée sans les recalculer. Il ne constitu
 notre CC ou notre CRAP. Comparer également, sur une fixture, sa capacité réelle à satisfaire le gate strict par
 méthode avant de conclure qu'un outil spécifique est nécessaire.
 
-Ces tests sont lents : les isoler (trait xUnit ou projet séparé) pour que `dotnet test` reste rapide.
+**Réalisé à l'étape 6** (14 tests de bout en bout, 12 fixtures dans `tests/fixtures/`). Ils sont dans le projet de tests
+mais marqués `[EndToEndFact]` (trait `Category=EndToEnd`) : **ignorés sauf si `CRAPSHARP_E2E=1`**, donc `dotnet test`
+reste rapide (≈ 0,2 s) et l'auto-contrôle de l'outil ne les lance pas. Commande : `CRAPSHARP_E2E=1 dotnet test --filter
+Category=EndToEnd` (≈ 40 s, réseau NuGet requis au premier passage). Les fixtures sont copiées dans un dossier
+temporaire ; leurs rapports Cobertura et JSON sont conservés dans `artifacts/e2e/<fixture>/` (ignoré par git). Les
+projets des fixtures sont en `*.csproj.template` pour que l'outil, lancé sur ce dépôt, ne les découvre pas.
+
+Écarts entre le calcul à la main et coverlet : un seul, sur `closures` (voir §4.4, la ligne `};` du lambda). Les autres
+valeurs (CC, lignes, CRAP brut, code de sortie) ont été retrouvées telles que calculées.
+
+**Reste de la liste de l'étape 6, non couvert de bout en bout** : un rapport réellement périmé (seul le test
+unitaire existe) ; `--changed` dans un vrai dépôt git (sélection vide, fichier modifié) ; une correspondance partielle de
+chemins (testée seulement avec des rapports écrits à la main) ; un projet sans aucun membre ; Microsoft.Testing.Platform
+avec adhésion explicite au nouveau `dotnet test` (voir §7, étape 10).
 
 **Ordre retenu** : on valide la mesure (6, 7) avant de figer le skill (8), parce que le skill s'appuie sur des chiffres
 qu'il faut pouvoir croire. Le skill peut toutefois être rédigé en parallèle, car il dépend peu des détails de l'outil.
 Ses commandes d'installation et d'exécution devront être vérifiées avec le package réel de l'étape 9 avant de le
 considérer terminé.
 
-## 7. Questions ouvertes
+**Étape 11 — définition de terminé.** Comparer l'outil choisi à des exemples C# de duplication réelle et de code
+semblable sans duplication problématique. Établir la signification de son seuil : le rang `≥ 0,8` de dryer ne se
+transpose pas automatiquement à un autre détecteur. Le contrôle doit fournir des emplacements et des diagnostics
+exploitables, un code de sortie stable pour la CI, des exclusions documentées (code généré, tests si pertinent) et une
+commande exacte dans le skill. Vérifier le temps d'exécution et les faux positifs sur un dépôt .NET représentatif.
 
-1. **Nom du skill** : `/crap-mode` avait été proposé pour un skill limité au CRAP. Pour un équivalent complet
-   d'ub-mode, un nom comme `/ub-dotnet` serait plus juste. À trancher avec l'utilisateur.
-2. **Couverture des branches** : faut-il pondérer par la `condition-coverage` de Cobertura ? Pour l'instant, lignes
-   uniquement, comme crapper.
-3. **`--changed` et `--filter`** écrasent `.metrics/crap.json` avec un rapport partiel. Faut-il un fichier séparé, ou
-   fusionner avec le rapport complet précédent ?
-4. **Ouverture des `.sln`** et prise en compte de `Directory.Build.props` pour détecter les projets de tests : à faire
-   seulement si un vrai projet en a besoin.
-5. **Export compatible uml-viewer** (EDN de crapper) : hors périmètre, sauf demande.
-6. **Commits** : rien n'est commité pour l'instant (demande de l'utilisateur), donc il n'y a aucun historique ni
-   retour arrière possible. À rediscuter.
-7. **Rapport de test manquant et sélection vide** : définir le comportement lorsqu'un projet de tests a réussi sans
-   produire de rapport alors que d'autres en ont produit, ou lorsque `--changed` / `--filter` ne sélectionne rien.
-   Cela ne change pas la règle « source absente du rapport valide = 0 % ».
-8. **Configuration analysée** : l'analyse Roslyn syntaxique ne lit ni les symboles `DefineConstants` ni les fichiers
-   `Compile` évalués par MSBuild. Définir si le contrat cible une configuration / un framework précis ou l'union des
-   cibles, puis aligner découverte des sources et rapports de couverture sur ce choix.
-9. **Microsoft.Testing.Platform** : tester deux voies qui savent produire Cobertura :
-   `Microsoft.Testing.Extensions.CodeCoverage` (`--coverage --coverage-output-format cobertura`) et `coverlet.MTP`
-   (`--coverlet --coverlet-output-format cobertura`). Les options et dépendances sont distinctes
-   ([documentation .NET](https://learn.microsoft.com/en-us/dotnet/core/testing/microsoft-testing-platform-code-coverage)).
+**Étape 12 — preuve d'utilisation autonome et portable.** Depuis une copie propre d'un projet .NET **sans Spec Kit** :
+- restaurer les outils avec des versions fixées (manifeste `dotnet tool` pour `crapsharp` et Stryker.NET, ou procédure
+  équivalente) et exécuter les commandes documentées sur Windows et Linux ;
+- exécuter `crapsharp . --threshold 10`, Stryker.NET et le contrôle de duplication directement en terminal et dans une
+  CI qui interprète leurs codes de sortie, sans agent IA ;
+- rédiger le cœur du skill avec le format ouvert `SKILL.md`, sans syntaxe propre à un agent. Documenter et essayer
+  son installation et son invocation dans Claude Code et dans Codex / ChatGPT sur une surface qui donne accès au
+  dépôt et à la CLI. Les emplacements et commandes d'invocation propres à chaque hôte restent dans de courts guides
+  séparés ([Claude Code](https://code.claude.com/docs/en/skills),
+  [documentation officielle OpenAI](https://learn.chatgpt.com/docs/build-skills)) ;
+- démontrer sur le pilote un résultat conforme et un échec attendu pour chaque contrôle, mesurer leur durée et
+  documenter les limites (par exemple configuration MSBuild, frameworks ciblés, collecteur de couverture). Un skill
+  chargé dans un environnement sans accès aux fichiers ou sans exécution de commandes ne peut pas lancer le gate ;
+- décider séparément si un plugin est nécessaire pour distribuer le skill dans ChatGPT web/mobile. Cette distribution
+  ne conditionne pas l'usage de la CLI et du skill dans les hôtes locaux déjà vérifiés.
+
+**Étape 13 — adaptation à Spec Kit.** Sur un projet pilote utilisant Spec Kit, inscrire les règles de qualité dans la
+constitution, invoquer le skill pendant l'implémentation et fournir un exemple d'extension ou d'overlay qui lance
+les contrôles après `implement` ([extensions](https://github.github.io/spec-kit/reference/extensions.html),
+[workflows](https://github.github.io/spec-kit/reference/workflows.html)). Vérifier les résultats et les codes de
+sortie dans ce contexte. L'adaptateur réutilise les commandes de l'étape 12 ; le cœur ne dépend pas de Spec Kit.
+
+**Critère de valeur ajoutée.** À l'étape 7 puis sur le pilote de l'étape 12, comparer le résultat et l'effort d'usage à
+ReportGenerator + Stryker.NET + l'outil de duplication retenu. La formule CRAP seule n'est pas nouvelle ; CrapSharp
+doit apporter un diagnostic par méthode et un gate .NET plus fiables ou plus simples à utiliser pour justifier sa
+maintenance. Un score CRAP < 10 reste un indicateur de risque, pas une preuve de couverture ni de correction : une
+méthode de CC 1 non couverte obtient CRAP 2.
+
+## 7. Décisions restantes, au moment où elles deviennent nécessaires
+
+Les orientations ci-dessous sont des propositions, pas des décisions déjà prises. Une étape se termine lorsque son
+choix est consigné ici ou dans §8, mis en œuvre si nécessaire, et vérifié par le critère de l'étape. On ne doit pas
+attendre de trancher tous les points avant de commencer l'étape 6.
+
+| Quand | Décision à prendre | Orientation actuelle / preuve attendue |
+|---|---|---|
+| 6 | Projet de tests exécuté avec succès mais sans rapport, alors que d'autres rapports existent ; sélection vide avec `--changed` ou `--filter` | **Pris provisoirement à l'étape 6, à valider à la relecture** : avertissement nommant le projet (0 % pour ce que lui seul couvre) ; erreur si aucun projet n'a de rapport ; `--filter` sans correspondance → 1, `--changed` sans changement → 0 (§4.4). |
+| 6–7 | Une ou plusieurs cibles .NET, `DefineConstants`, fichiers `Compile`, projets hors racine de `.sln`, `Directory.Build.props` | Choisir le périmètre réellement compilé que l'outil promet ; mesurer les écarts sur fixtures avant de décider du support MSBuild. |
+| 7 | Couverture des branches de Cobertura | Conserver la couverture par lignes pour le CRAP tant qu'un cas réel ne justifie pas une autre convention ; documenter l'écart avec les autres outils. |
+| 7 | Réutiliser ReportGenerator ou poursuivre le calcul propre à CrapSharp | Comparer scores et effort d'usage sur les mêmes fixtures, avec des valeurs attendues établies indépendamment (§6). |
+| 8 | Nom du skill (`/crap-mode` pour CRAP seul, `/ub-dotnet` ou autre pour la discipline complète) | Choisir un nom cohérent avec son périmètre et vérifier l'invocation dans les hôtes visés. |
+| 8, 12 | Règle de mutation Stryker.NET : quand lancer le contrôle et quel verdict rend la CI rouge | Séparer le retour rapide du contrôle potentiellement long ; documenter la commande, le seuil retenu et un cas d'échec attendu. |
+| 9, 12 | Identifiant et version du package, mode de distribution, licence du projet | Tester au moins un manifeste `dotnet tool` depuis une copie propre ; décider ensuite de la publication NuGet. Fournir une licence explicite avant toute diffusion publique. |
+| 6, 12 | `--changed` / `--filter` et `.metrics/crap.json` | **Partiel** : métadonnées `scope.complete` ajoutées (§4.6) ; un rapport partiel écrase toujours le fichier. Reste à décider d'un second fichier, et à vérifier les consommateurs (skill). |
+| 10 | Support Microsoft.Testing.Platform | Tester `Microsoft.Testing.Extensions.CodeCoverage` (`--coverage --coverage-output-format cobertura`) et `coverlet.MTP` (`--coverlet --coverlet-output-format cobertura`) ; intégrer la voie retenue ou documenter la limite ([documentation .NET](https://learn.microsoft.com/en-us/dotnet/core/testing/microsoft-testing-platform-code-coverage)). |
+| 11 | Détecteur de duplication, seuil, exclusions et coût | Comparer un outil existant (ex. jscpd) à une brique Roslyn sur des exemples C# ; le rang `0,8` de dryer n'est pas directement transférable (§6). |
+| 12 | Hôtes testés pour le skill et niveau de support promis | Vérifier au minimum Claude Code et Codex / ChatGPT avec accès au dépôt et à la CLI ; publier une matrice « testé / documenté / non pris en charge ». Un skill seul ne donne pas accès à un shell. |
+| 12 ou plus tard | Distribution du skill dans ChatGPT web/mobile | Décider si un plugin est utile ; l'usage CLI/CI et les hôtes locaux ne dépendent pas de cette option. |
+| 13 | Forme de l'adaptateur Spec Kit | Choisir extension, overlay de workflow ou simple guide sur le pilote ; conserver les mêmes commandes CLI que hors Spec Kit. |
+
+L'export EDN compatible `uml-viewer` reste hors périmètre, sauf demande explicite.
+
+**Jalons de livraison.** La CLI peut être annoncée fiable pour son périmètre déclaré après 6–7 et 9. Le produit
+portable (CLI + skill + mutations + duplication) est prêt à être diffusé après 8–12, si le pilote et la matrice d'hôtes
+passent. L'étape 13 valide ensuite Spec Kit ; elle n'est pas un prérequis à l'usage autonome.
 
 ## 8. Décisions prises
 
@@ -253,6 +334,10 @@ considérer terminé.
 - Seuil strict (`≥ N` échoue) ; affichage tronqué.
 - Cible .NET 10 (LTS), car .NET 8 n'est plus supporté à partir du 10 novembre 2026.
 - Mutations : Stryker.NET, sans réécriture.
+- Un seul choix de source de couverture par exécution : en donner plusieurs est une erreur, plus de priorité silencieuse (étape 6).
+- Un commit initial existe (`3d8d55f`, étapes 1 à 5) ; aucun commit supplémentaire n'est demandé ici.
+- CLI et contrôles utilisables indépendamment de tout agent ; cœur du skill portable, avec guides d'installation
+  propres aux hôtes vérifiés. Spec Kit reste un adaptateur prévu à terme.
 - Correspondance de couverture partielle : avertissement par projet, méthodes absentes notées à 0 % ; erreur seulement
   si aucun fichier analysé ne correspond au rapport.
 
@@ -265,25 +350,27 @@ Texte complet dans [REVIEWS.md](REVIEWS.md).
 | Codex 1, Claude | Seuil : un score égal à 10 passait | **Corrigé** : `>=`, message explicite, tests au seuil exact (§4.1) |
 | Codex 1, Claude | L'arrondi d'affichage trompe (9,96 → « 10.0 ») | **Corrigé** : troncature dans le tableau et le JSON |
 | Claude | .NET 8 en fin de support le 10/11/2026 | **Corrigé** : net10.0 et `RollForward=Major` |
-| Claude | `[ExcludeFromCodeCoverage]` noté à 0 % | **Corrigé** côté analyse ; comportement de coverlet à confirmer (étape 6) |
+| Claude | `[ExcludeFromCodeCoverage]` noté à 0 % | **Corrigé** et **confirmé** sur coverlet 6.0.0 (fixture `excluded`) |
 | Codex 3, Claude | Échec des tests annoncé comme un succès | **Corrigé** : code 3, rapport conservé (§4.5) |
 | Codex 3, Claude | Chemins du rapport qui ne correspondent pas | **Corrigé** : erreur si aucun fichier ne correspond, avertissement par projet si la correspondance est partielle |
 | Claude | Options inconnues ignorées, pas de `--help` | **Corrigé** : options strictes, `--help` / `-h` |
 | Codex 4 | Instructions de niveau supérieur ignorées | **Corrigé** : une entrée par fichier (§4.3) |
-| Codex 4 | `#if`, multi-cible, fichiers liés, code généré | **Documenté** (§4.3) ; multi-cible à vérifier à l'étape 6 |
+| Codex 4 | `#if`, multi-cible, fichiers liés, code généré | **Documenté** (§4.3) ; multi-cible **vérifié** (fixture `multitarget`) |
 | Codex 5 | Conventions de complexité à spécifier avec exemples | **Fait** (§4.2) ; comparaison avec ReportGenerator à l'étape 7 |
-| Codex 2 | Limites du rapprochement par lignes à mesurer | **À faire** (étape 6) ; limites décrites en §4.4 |
+| Codex 2 | Limites du rapprochement par lignes à mesurer | **Mesuré** sur `closures` et `sameline` ; limites en §4.4 |
 | Codex | Contrat de la CLI à détailler | **Fait** (§4.5, `--help`, PROGRESS.md) |
-| Codex | Tests de bout en bout avec vrais rapports coverlet | **À faire** (étape 6) |
+| Codex | Tests de bout en bout avec vrais rapports coverlet | **Fait** (14 tests, étape 6 ; manques listés en §6) |
 | Codex | ReportGenerator plus tôt | **Avancé** : étape 7, juste après les fixtures |
 | Codex, Claude | Périmètre : CRAP seulement ≠ ub-mode | **Intégré** : phases A, B, C (§2) |
 | Codex | Le skill doit pousser vers des tests de comportement, pas des tests artificiels | **Retenu** pour l'étape 8 |
 | Codex | Compatibilité uml-viewer | Hors périmètre (§7.5) |
-| Claude | Microsoft.Testing.Platform incompatible avec `--collect` | **Message d'erreur** ajouté ; à vérifier à l'étape 6, éventuel support à l'étape 10 |
-| Codex 3 | Un rapport partiel ou une seule cible peut produire un gate trompeur ; `NewestPerRun` ne garde qu'un rapport par projet | **Nuancé** : l'absence d'un projet de production donne 0 % avec avertissement ; la perte d'une cible reste à vérifier à l'étape 6 |
+| Claude | Microsoft.Testing.Platform incompatible avec `--collect` | **Constaté** (fixture `mtp`, SDK 10) : `dotnet test` refuse le projet, code 1 avec message ; support à l'étape 10 |
+| Codex 3 | Un rapport partiel ou une seule cible peut produire un gate trompeur ; `NewestPerRun` ne garde qu'un rapport par projet | **Confirmé puis corrigé** : sur `multitarget`, un rapport était perdu (6,00 au lieu de 2,00) ; tous les rapports d'un run sont lus. Projet de tests sans rapport : avertissement (§4.4) |
 | Codex 3 | ReportGenerator expose CRAP mais ne recalcule pas les métriques fournies | **Ajouté** à l'étape 7 : valeurs attendues établies indépendamment |
-| Codex 3 | Seuil CLI non fini, modes concurrents, JSON tronqué et périmètre implicite | **Ajouté** aux critères de sortie avant le skill |
+| Codex 3 | Seuil CLI non fini, modes concurrents, JSON tronqué et périmètre implicite | **Corrigé** (étape 6) : seuil fini > 0, sources de couverture exclusives, valeur manquante, `crapRaw`, `scope`, `coverage`, sélection vide (§4.4 à 4.6) |
 | Utilisateur | Une correspondance partielle est légitime si aucun test n'utilise un projet de production | **Décidé et implémenté** : avertissement par projet, 0 % ; erreur seulement si aucun fichier n'est apparié |
+| Utilisateur | L'usage avec Claude, ChatGPT et d'autres contextes prime ; Spec Kit viendra ensuite | **Intégré** : CLI/CI autonomes et skill portable à l'étape 12, adaptateur Spec Kit à l'étape 13 |
 
-**Pour la prochaine review**, regarder en priorité le contrat de complétude de la couverture et les résultats des
-fixtures de l'étape 6, avant de figer la CLI et le skill.
+**Pour la prochaine review**, regarder en priorité : les choix de comportement pris à l'étape 6 sans décision préalable
+(sources de couverture exclusives, sélection vide, fenêtre de 10 minutes de `--use-existing-coverage`, avertissement
+pour un projet de tests sans rapport), les manques listés en §6, puis l'étape 7.

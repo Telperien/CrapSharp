@@ -137,6 +137,20 @@ public class AppTests
     }
 
     [Fact]
+    public void AFileWithNoMeasurableMemberNeverCountsAsMissingFromTheCoverage()
+    {
+        using var ws = new TempWorkspace();
+        var (source, _) = ws.CreateSolution();
+        ws.Write("src/App/Codes.cs", "namespace App; static class Codes { public const int Ok = 0; }");
+        var report = ws.Write("cov.xml", TempWorkspace.CoberturaXml(source, (6, 1), (7, 0)));
+
+        var outcome = Run(new Options(ws.Root, [report]), new FakeProcessRunner());
+
+        Assert.Equal(0, outcome.ExitCode);
+        Assert.DoesNotContain("warning", outcome.Error);
+    }
+
+    [Fact]
     public void ACoverageReportThatMentionsTheSourcesIsNotFlagged()
     {
         using var ws = new TempWorkspace();
@@ -222,6 +236,68 @@ public class AppTests
 
         Assert.Contains("Other.M", outcome.Output);
         Assert.DoesNotContain("Calc.Sign", outcome.Output);
+    }
+
+    [Fact]
+    public void AFilteredRunIsMarkedPartialInTheJsonWithTheReportsItUsed()
+    {
+        using var ws = new TempWorkspace();
+        var (source, _) = ws.CreateSolution();
+        var report = ws.Write("cov.xml", TempWorkspace.CoberturaXml(source, (6, 1), (7, 0)));
+
+        var outcome = Run(new Options(ws.Root, [report], Filter: "Calc"), new FakeProcessRunner());
+
+        Assert.Equal(0, outcome.ExitCode);
+        using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(ws.Path_(".metrics/crap.json")));
+        Assert.False(doc.RootElement.GetProperty("scope").GetProperty("complete").GetBoolean());
+        Assert.Equal("Calc", doc.RootElement.GetProperty("scope").GetProperty("filter").GetString());
+        Assert.Equal([report], doc.RootElement.GetProperty("coverage").GetProperty("reports").EnumerateArray().Select(r => r.GetString()));
+    }
+
+    [Fact]
+    public void AFilterThatMatchesNothingIsAnErrorAndRunsNothing()
+    {
+        using var ws = new TempWorkspace();
+        ws.CreateSolution();
+
+        var outcome = Run(new Options(ws.Root, [], Threshold: 10, Filter: "Typo"), new FakeProcessRunner());
+
+        Assert.Equal(1, outcome.ExitCode);
+        Assert.Contains("--filter 'Typo' matches none of the 1 source file(s)", outcome.Error);
+        Assert.Empty(outcome.Runner.Calls);
+        Assert.False(File.Exists(ws.Path_(".metrics/crap.json")));
+    }
+
+    [Fact]
+    public void NothingChangedIsASuccessThatRunsNothingAndKeepsThePreviousJson()
+    {
+        using var ws = new TempWorkspace();
+        ws.CreateSolution();
+        var previous = ws.Write(".metrics/crap.json", "{}");
+        var git = new FakeProcessRunner((_, args, _) => args[0] == "rev-parse"
+            ? new ProcessResult(0, ws.Root + "\n", "")
+            : new ProcessResult(0, "", ""));
+
+        var outcome = Run(new Options(ws.Root, [], Threshold: 10, Changed: true), git);
+
+        Assert.Equal(0, outcome.ExitCode);
+        Assert.Contains("no changed C# source file", outcome.Error);
+        Assert.DoesNotContain(git.Calls, call => call.File == "dotnet");
+        Assert.Equal("{}", File.ReadAllText(previous));
+    }
+
+    [Fact]
+    public void NoProductionSourceAtAllIsAnError()
+    {
+        using var ws = new TempWorkspace();
+        ws.Write("tests/T/T.csproj", "<Project><ItemGroup><PackageReference Include=\"Microsoft.NET.Test.Sdk\" /></ItemGroup></Project>");
+        ws.Write("tests/T/UnitTests.cs", "class UnitTests { void M() { } }");
+
+        var outcome = Run(new Options(ws.Root, [], Threshold: 10), new FakeProcessRunner());
+
+        Assert.Equal(1, outcome.ExitCode);
+        Assert.Contains("no production C# source file found", outcome.Error);
+        Assert.Empty(outcome.Runner.Calls);
     }
 
     [Fact]
