@@ -7,8 +7,7 @@ A .NET counterpart of [unclebob/ub-mode](https://github.com/unclebob/ub-mode):
 - **`skill/dotnet-craft`**, a skill (`SKILL.md`) describing the working discipline (strict TDD, refactoring, deterministic checks)
   and calling `crapsharp` and Stryker.NET.
 
-> Status: the tool is usable from source and installs as a local `dotnet tool` from a local package. Publication on NuGet, a license and
-> duplication detection are not done yet
+> Status: the tool is usable from source and installs as a local `dotnet tool` from a local package. Publication on NuGet is not done yet
 > (see [PLAN.md](PLAN.md), written in French).
 
 ## The score
@@ -86,4 +85,6 @@ Tracking: [PLAN.md](PLAN.md) (specification, roadmap, decisions), [PROGRESS.md](
 
 ## License
 
-No license has been chosen yet: until one is, the code cannot be reused.
+[MIT](LICENSE). You may use, copy, modify and distribute this project, but the copyright line (Nicolas Friederich - CrapSharp) and the license text
+must be kept in all copies or substantial portions of it. This covers the tool, the skill and the documentation. The package depends on
+Roslyn (`Microsoft.CodeAnalysis`), which keeps its own MIT license.

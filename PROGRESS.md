@@ -14,7 +14,7 @@
 | 6 | Fixtures réelles et tests de bout en bout | **fait, à relire** (manques listés plus bas) |
 | 7 | Oracle de complexité indépendant et comparaison avec ReportGenerator | **fait, à relire** |
 | 8 | Skill complet (discipline ub-mode, `crapsharp`, Stryker.NET) + README | **rédigé, à relire** |
-| 9 | Packaging `dotnet tool` | **fait en local**, à relire (pas de publication NuGet, pas de licence) |
+| 9 | Packaging `dotnet tool` | **fait en local**, à relire (pas de publication NuGet) ; licence MIT ajoutée |
 | 10 | Microsoft.Testing.Platform | **fait, à relire** |
 | 11 | Duplication | **jscpd adopté** (provisoire), à relire |
 | 12 | Livraison autonome et essais du skill dans plusieurs agents | **en cours** : CI faite |
@@ -181,6 +181,11 @@ toujours pas de licence.
 - Essayé à la main : installation avec `--tool-path` (commande `crapsharp` directe) ; le paquet contient bien `DotnetToolSettings.xml`
   et le README.
 - Les commandes du skill et du README utilisent maintenant `dotnet crapsharp` après `dotnet pack` et `dotnet tool install`.
+
+**Licence** : MIT (fichier `LICENSE`, `PackageLicenseExpression=MIT`, section du README), à la demande de l'utilisateur d'une licence qui impose de
+mentionner le projet et son auteur (la ligne de copyright « Nicolas Friederich - CrapSharp » doit être conservée dans les copies). Titulaire : Nicolas Friederich,
+nom donné par l'utilisateur. Apache-2.0 (fichier `NOTICE`) est l'alternative plus contraignante
+sur la mention ; non retenue. Pas d'avis juridique : choix technique à faire relire.
 
 **À décider** : l'identifiant `CrapSharp` et la version `0.1.0-preview.1` (propositions) ; la licence (indispensable avant toute
 publication NuGet ou GitHub publique) ; la publication éventuelle sur NuGet.
