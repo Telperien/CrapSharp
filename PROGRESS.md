@@ -204,6 +204,9 @@ seulement `--tool-path` et le manifeste local.
 - Vérifié localement : `dotnet pack` crée `CrapSharp.0.1.0-preview.1.nupkg` avec les métadonnées attendues ; une installation
   depuis ce paquet dans un manifeste neuf, avec `DOTNET_CLI_HOME` et le cache NuGet isolés, lance `--help` et un gate réel
   (`--filter MemberNaming`, pire score 9,06, sortie 0). Les 208 tests rapides passent.
+- La relance ciblée du test de bout en bout `PackagingTests` n'a pas abouti dans cette session : la première restauration
+  n'atteignait pas NuGet.org, puis `vstest` a expiré en attendant `testhost` avec le CLI isolé. Le smoke test manuel ci-dessus
+  est passé ; le workflow GitHub et la publication réelle restent à exécuter.
 - Reste extérieur au dépôt : choix définitif du nom et de la version, variable GitHub `NUGET_USER`, politique NuGet OIDC,
   publication d'une Release et installation depuis NuGet.org sur un environnement neuf.
 
@@ -314,6 +317,21 @@ outils (CrapSharp 0.1.0-preview.3, Stryker 5.0.0) et le skill. Invocation explic
   pas une panne ; l'avertissement de Stryker est trompeur. Avec seulement le nouveau test (ancien code) : 40 tués sur 45, 72,73 %.
 
 Changements du skill qui en découlent : lire le code de sortie soi-même (ne pas masquer par `tail`) et comment lire ce cas de Stryker.
+
+## Premier essai du skill dans Codex (même projet `craft-test`)
+
+Invocation explicite par `$dotnet-craft`, application de bureau. Constaté :
+- même refactorisation (`Math.Clamp(x, 0, 9)`) avec un test paramétré de 14 cas écrit **avant** ; ce test passait dès sa première exécution
+  (il fige le comportement existant, pas de phase rouge) et Codex l'a dit ;
+- gate CRAP : `Ten` à 1,00, maximum du projet 6,00, **mais seulement hors du bac à sable** : dedans, la collecte de couverture était bloquée
+  (`--filter Decisions.cs`, `--collect:"XPlat Code Coverage"`) et `--use-existing-coverage` ne trouvait aucun rapport ;
+- Stryker : échec dans le bac à sable (accès refusé au gestionnaire de services Windows), puis hors bac : 1 mutant tué, 3 sans couverture
+  (25 %, seuil 80 échoué) ; les variantes `--mutate "**/Decisions.cs{5..8}"` ne retiennent aucun mutant. Codex n'a **pas** présenté ce code
+  de sortie 0 comme un succès du gate (l'échec est annoncé : « mutation incomplète ») ;
+- jscpd : 0 clone sur `src` et `tests` ; pas de commit ; `git diff --check` propre.
+
+À retenir : la différence avec Claude Code tient surtout au bac à sable de Codex, pas au skill. Le skill ne dit pas quoi faire quand la collecte
+de couverture est bloquée ; à documenter (demander l'autorisation d'exécuter hors bac à sable, ne jamais déclarer le gate passé sans score réel).
 
 **Non vérifié** : le déclenchement automatique du skill (essai 3 non fait), l'essai dans Codex, la suite après ce premier essai.
 

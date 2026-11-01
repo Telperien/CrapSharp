@@ -122,6 +122,7 @@ The Windows example above builds and installs both local .NET tools. On another 
 | Host | Status |
 |---|---|
 | Claude Code | tried once on a small test project, invoked with `/dotnet-craft`: it added tests first, refactored, ran the CRAP gate, the tests, Stryker and jscpd and reported honestly what it could not verify; automatic loading **not tried** |
+| Codex desktop app | tried once on the same test project, invoked with `$dotnet-craft`: it refactored with a boundary test, reached CRAP 1.00 and jscpd 0 clones, and reported what the sandbox blocked (coverage collection, Stryker); the CRAP gate needed a run outside the sandbox; automatic loading **not tried** |
 | Codex CLI / IDE extension | documented from the official page; **not tried** |
 | ChatGPT desktop | documented; **not tried**; shell access not stated by the documentation |
 | GitHub Copilot in VS Code (Agent mode) | documented from the official page; **not tried** |

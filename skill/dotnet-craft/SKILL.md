@@ -74,6 +74,10 @@ Read the exit code of every gate yourself: do not pipe a gate into `tail` or `he
 A warning is not a success: "coverage report does not mention … file(s)" flags a production project that the tests do not run
 (its methods score 0 %); "may be stale" flags sources edited after the report was written.
 
+If the environment blocks the gate (a sandbox that stops coverage collection, Stryker or a build server), ask for permission to run it
+outside the sandbox. Never report a gate as passed from a run that produced no real score: `--no-coverage` only shows complexity, and an
+exit code 0 from a filtered or empty run proves nothing. Say which gate you could not run and why.
+
 ### 3.1 What to do about a high score
 
 - If **CC ≥ 10**, no amount of coverage is enough: reduce the complexity (simplify the decisions, delete unneeded code, extract a
