@@ -221,11 +221,11 @@ skill/<nom>/SKILL.md           phase B
 | 6 | **Fixtures réelles et tests de bout en bout** (détail ci-dessous) | **fait, à relire** (reste : voir ci-dessous) |
 | 7 | Validation indépendante des scores attendus sur les fixtures ; comparaison complémentaire avec ReportGenerator et évaluation de son éventuelle réutilisation | **fait, à relire** |
 | 8 | Skill portable (phase B) : discipline ub-mode pour .NET, `crapsharp`, Stryker.NET ; politique d'exécution des mutations ; README | **rédigé, à relire** (invocation dans les agents et `dotnet tool` non vérifiées : étapes 9 et 12) |
-| 9 | Packaging `dotnet tool` (`PackAsTool`, `ToolCommandName=crapsharp`), installation locale et commandes du skill vérifiées | **fait pour l'installation locale** (publication NuGet, licence et Linux/macOS non faits) |
+| 9 | Packaging `dotnet tool` (`PackAsTool`, `ToolCommandName=crapsharp`), installation locale et commandes du skill vérifiées | **fait pour l'installation locale** ; licence MIT et CI Linux faites ; publication NuGet en cours de validation, macOS non fait |
 | 10 | Support des projets sur Microsoft.Testing.Platform (si l'étape 6 confirme le problème) | **fait, à relire** |
 | 11 | Contrôle de duplication (phase C) : choisir entre un outil existant (ex. jscpd) et une brique Roslyn, puis l'intégrer et le valider | **fait provisoirement** : jscpd adopté (option C), brique Roslyn si la limite gêne |
-| 12 | Essai de livraison (phase D) : installation reproductible, CLI/CI, skill dans Claude Code, Codex et GitHub Copilot (VS Code), puis pilote sur un projet .NET réel | **en cours** : CI Linux + Windows faite ; agents et pilote à faire |
-| 13 | Adaptateur Spec Kit (phase E) prêt à installer : skill, règles de constitution, contrôles du workflow et exemple de projet | à terme |
+| 12 | Essai de livraison (phase D) : installation reproductible, CLI/CI, skill dans Claude Code, Codex et GitHub Copilot (VS Code), puis pilote sur un projet .NET réel | **en cours** : CI Linux + Windows faite ; Claude Code et Codex essayés une fois ; Copilot et pilote externe à faire |
+| 13 | Adaptateur Spec Kit (phase E) prêt à installer : skill, règles de constitution, contrôles du workflow et exemple de projet | **premier jet** (`speckit/crapsharp`) : essayé une fois dans Claude Code ; hook, Codex et exemple de projet à faire |
 | 14 | Description finale (phase F) : expliquer le problème, les outils, l'usage et les limites ; publier les résumés utiles à la découverte | à faire en dernier |
 
 **Étape 6 en détail.** Des mini-solutions dans `tests/fixtures/`, chacune avec un vrai projet de tests et coverlet.

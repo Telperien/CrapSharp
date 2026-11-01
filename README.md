@@ -88,6 +88,15 @@ display (`crap`) and the exact score compared with the threshold (`crapRaw`).
 Installation in Claude Code, Codex and GitHub Copilot, and a table of what has and has not been tested:
 [docs/using-the-skill.md](https://github.com/Telperien/CrapSharp/blob/main/docs/using-the-skill.md).
 
+## Spec Kit
+
+An extension for [Spec Kit](https://github.com/github/spec-kit) adds a quality-gate command and an optional hook after
+implementation: [speckit/crapsharp](https://github.com/Telperien/CrapSharp/tree/main/speckit/crapsharp). It was tried once, with Claude Code.
+
+## Changes
+
+See the [changelog](https://github.com/Telperien/CrapSharp/blob/main/CHANGELOG.md).
+
 ## Mutation testing
 
 Mutations are left to [Stryker.NET](https://stryker-mutator.io/), without rewriting it; the procedure is in

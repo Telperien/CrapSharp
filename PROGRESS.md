@@ -2,8 +2,8 @@
 
 > Fichier destiné à la **review par une autre IA ou un humain**. Mis à jour à chaque étape.
 > Objectif, conventions de mesure et feuille de route : [PLAN.md](PLAN.md). Reviews : [REVIEWS.md](REVIEWS.md).
-> Dernière mise à jour : 2026-11-01 — étapes 1 à 12 faites (la 12 en partie), licence MIT, CI Linux et Windows verte ; premier essai sur un
-> projet réel (Tower Attack, un jeu Godot) : voir « Retours du premier projet réel ». Les commits sont sur `main`.
+> Dernière mise à jour : 2026-11-01 — étapes 1 à 12 faites (la 12 en partie), premier jet de l'adaptateur Spec Kit (13), licence MIT, CI Linux et
+> Windows verte, tag `v0.1.0-preview.1` posé (publication NuGet en cours de validation, non vérifiée). Les commits sont sur `main`.
 
 ## Résumé de l'état
 
@@ -17,13 +17,13 @@
 | 9 | Packaging `dotnet tool` | **fait en local** ; métadonnées, README et workflow NuGet préparés, publication non faite |
 | 10 | Microsoft.Testing.Platform | **fait, à relire** |
 | 11 | Duplication | **jscpd adopté** (provisoire), à relire |
-| 12 | Livraison autonome et essais du skill dans Claude Code, Codex et GitHub Copilot (VS Code) | **en cours** : CI faite ; trois hôtes et pilote externe à essayer |
-| 13 | Adaptateur Spec Kit | à terme |
+| 12 | Livraison autonome et essais du skill dans Claude Code, Codex et GitHub Copilot (VS Code) | **en cours** : CI faite ; Claude Code et Codex essayés une fois (chargement automatique constaté, discipline de Codex dans son bac à sable à confirmer) ; Copilot et pilote externe à faire |
+| 13 | Adaptateur Spec Kit | **premier jet** : extension installable et commande essayée une fois dans Claude Code ; hook, Codex et autres agents non essayés |
 | 14 | Description publique et découvrabilité | à faire en dernier |
 
 `dotnet test --configuration Release` : **208 tests rapides réussis, 23 ignorés** (net10.0, vérifié le 2026-11-01). Les tests de bout en bout
 ont été lancés séparément sur le projet `tests/CrapSharp.Tests/CrapSharp.Tests.csproj` avec `CRAPSHARP_E2E=1` :
-**26 réussis, 0 échec, 0 ignoré** (49 s, vérifié le 2026-11-01).
+**29 réussis, 0 échec, 0 ignoré** (1 min 15 s, vérifié le 2026-11-01).
 L'outil publié, lancé sur le dépôt (`crapsharp . --threshold 10`), exécute lui-même les tests avec couverture, se
 note, et sort avec le code 0, **sans avertissement** : pire CRAP = 9,06 (`MemberNaming.MemberName`, CC 9, 90 %).
 `App.Run(Options)` (CRAP 10) a été découpé en `Run`, `Invalid`, `Score` : il n'apparaît plus parmi les pires.

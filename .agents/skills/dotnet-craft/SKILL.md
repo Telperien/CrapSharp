@@ -134,6 +134,7 @@ Stryker exits with code 2 when the mutation score is below `--break-at`. Tried o
    If Stryker prints "test coverage capture failed" and reports 0 killed, first check whether any covered code is left to mutate: after
    a simplification (for example a body reduced to `Math.Clamp(x, 0, 9)`) the tested method may have no mutable operator left, and the
    mutants that remain sit in code no test runs. That is a true 0 %, not a broken tool; do not disable coverage analysis to "fix" it.
+   The same message appears when a method in the mutated files has no test at all: pin it with boundary tests, then run Stryker again.
    Mutate the files you changed explicitly if you need a score on them (`--mutate "src/App/Decisions.cs"`).
 4. **Threshold.** `--break-at 80` is a starting proposal, to be confirmed by the human for the project; never lower the threshold
    just to get a pass.
