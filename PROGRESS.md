@@ -211,8 +211,14 @@ seulement `--tool-path` et le manifeste local.
 Je n'ai pas pu lire les journaux (ils demandent une authentification) : cause non établie (restaurations NuGet à froid sur des
 runners lents, ou une attente fixe). À étudier avant d'exécuter ces tests à chaque `push`.
 
-**Reste de l'étape 12** : manifeste d'outils épinglant `crapsharp` et Stryker.NET sur une copie propre d'un vrai projet .NET ; essai du
-skill dans Claude Code et Codex / ChatGPT ; pilote sur un projet réel ; matrice « testé / documenté / non pris en charge ».
+**Pilote sur une copie propre** (le dépôt lui-même, cloné depuis GitHub dans un dossier temporaire, commit `1a541a3`) :
+- manifeste `dotnet new tool-manifest`, puis `crapsharp 0.1.0-preview.1` (paquet local) et `dotnet-stryker 5.0.0` épinglés dans `dotnet-tools.json` ;
+- `dotnet crapsharp . --threshold 10` : code 0, 4 s, aucun avertissement ;
+- `dotnet stryker --project CrapSharp.csproj --break-at 50` depuis `tests/CrapSharp.Tests` : 612 mutants, 375 tués, 65 survivants,
+  10 sans couverture, **score 83,33 %**, 55 s, code 0. Les 65 survivants n'ont pas été examinés : ils sont une piste d'amélioration des tests.
+
+**Reste de l'étape 12** : essai du skill dans Claude Code et Codex / ChatGPT (de ton côté) ; un pilote sur un projet qui n'est pas le
+nôtre ; matrice « testé / documenté / non pris en charge » ; élucider la durée des tests de bout en bout en CI.
 
 ## Usage
 
