@@ -207,9 +207,11 @@ seulement `--tool-path` et le manifeste local.
   compris les tests de bout en bout sur Linux (donc : multi-cible, MTP, Stryker n'est pas concerné, paquet `dotnet tool`, `git`).
   Durées : tests rapides 14 s (Linux) / 22 s (Windows), auto-contrôle 7 s / 5 s, jscpd 2 s / 9 s.
 
-**À regarder** : les tests de bout en bout durent environ **15 minutes** sur les deux runners (919 s et 926 s) contre 48 s en local.
-Je n'ai pas pu lire les journaux (ils demandent une authentification) : cause non établie (restaurations NuGet à froid sur des
-runners lents, ou une attente fixe). À étudier avant d'exécuter ces tests à chaque `push`.
+**Durée des tests de bout en bout en CI** : 920 s au premier passage, alors que chaque test dure de moins d'une seconde à 23 s
+(durées lues dans les annotations du run, limitées aux 10 plus longs par système). Cause établie par mesure : les serveurs de build
+(nœuds MSBuild, serveur du compilateur) restent vivants après les builds lancés par les tests. Avec `MSBUILDDISABLENODEREUSE=1`,
+`UseSharedCompilation=false` et `DOTNET_CLI_USE_MSBUILD_SERVER=0` définis pour tout le workflow, l'étape passe à **145 s** sur
+Linux comme sur Windows. Le mécanisme exact (qui attend quoi) n'est pas établi.
 
 **Pilote sur une copie propre** (le dépôt lui-même, cloné depuis GitHub dans un dossier temporaire, commit `1a541a3`) :
 - manifeste `dotnet new tool-manifest`, puis `crapsharp 0.1.0-preview.1` (paquet local) et `dotnet-stryker 5.0.0` épinglés dans `dotnet-tools.json` ;
@@ -218,7 +220,7 @@ runners lents, ou une attente fixe). À étudier avant d'exécuter ces tests à 
   10 sans couverture, **score 83,33 %**, 55 s, code 0. Les 65 survivants n'ont pas été examinés : ils sont une piste d'amélioration des tests.
 
 **Reste de l'étape 12** : essai du skill dans Claude Code et Codex / ChatGPT (de ton côté) ; un pilote sur un projet qui n'est pas le
-nôtre ; matrice « testé / documenté / non pris en charge » ; élucider la durée des tests de bout en bout en CI.
+nôtre ; matrice « testé / documenté / non pris en charge » .
 
 ## Usage
 
