@@ -150,6 +150,51 @@ public class AppTests
         Assert.DoesNotContain("warning", outcome.Error);
     }
 
+    [Theory]
+    [InlineData(true, true)]
+    [InlineData(false, false)]
+    public void ASourceEditedAfterTheReusedReportWasWrittenIsWarnedAboutAsStale(bool sourceIsNewer, bool warned)
+    {
+        using var ws = new TempWorkspace();
+        var (source, _) = ws.CreateSolution();
+        var report = ws.Write("tests/App.Tests/TestResults/g/coverage.cobertura.xml", TempWorkspace.CoberturaXml(source, (6, 1), (7, 0)));
+        var now = DateTime.UtcNow;
+        File.SetLastWriteTimeUtc(report, sourceIsNewer ? now.AddMinutes(-10) : now);
+        File.SetLastWriteTimeUtc(source, sourceIsNewer ? now : now.AddMinutes(-10));
+
+        var outcome = Run(new Options(ws.Root, [], UseExistingCoverage: true), new FakeProcessRunner());
+
+        Assert.Equal(0, outcome.ExitCode);
+        Assert.Equal(warned, outcome.Error.Contains("changed after the coverage report was written"));
+    }
+
+    [Fact]
+    public void ATreeWithNoMeasurableMemberIsAnErrorNotAnEmptyPass()
+    {
+        using var ws = new TempWorkspace();
+        ws.Write("src/App/App.csproj", "<Project Sdk=\"Microsoft.NET.Sdk\"></Project>");
+        ws.Write("src/App/Codes.cs", "namespace App; static class Codes { public const int Ok = 0; }");
+
+        var outcome = Run(new Options(ws.Root, [], NoCoverage: true), new FakeProcessRunner());
+
+        Assert.Equal(1, outcome.ExitCode);
+        Assert.Contains("no measurable member found in the 1 analyzed file(s)", outcome.Error);
+        Assert.Empty(outcome.Output);
+    }
+
+    [Fact]
+    public void ASelectionWithNoMeasurableMemberIsAcceptedWithANote()
+    {
+        using var ws = new TempWorkspace();
+        ws.CreateSolution();
+        ws.Write("src/App/Codes.cs", "namespace App; static class Codes { public const int Ok = 0; }");
+
+        var outcome = Run(new Options(ws.Root, [], NoCoverage: true, Filter: "Codes"), new FakeProcessRunner());
+
+        Assert.Equal(0, outcome.ExitCode);
+        Assert.Contains("no measurable member in the selected file(s)", outcome.Error);
+    }
+
     [Fact]
     public void ACoverageReportThatMentionsTheSourcesIsNotFlagged()
     {

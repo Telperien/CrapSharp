@@ -118,6 +118,9 @@ public sealed class FixtureCopy : IDisposable
         KeepDiagnostics();
         try
         {
+            // Git writes its objects read-only, which Directory.Delete refuses on Windows.
+            foreach (var file in Directory.EnumerateFiles(Root, "*", SearchOption.AllDirectories))
+                File.SetAttributes(file, FileAttributes.Normal);
             Directory.Delete(Root, recursive: true);
         }
         catch (IOException)

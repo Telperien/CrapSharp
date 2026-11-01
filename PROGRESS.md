@@ -19,9 +19,11 @@
 | 11 | Duplication | à faire |
 | 12 | Livraison autonome et essais du skill dans plusieurs agents | à faire |
 | 13 | Adaptateur Spec Kit | à terme |
+| 14 | Description publique et découvrabilité | à faire en dernier |
 
-`dotnet test` : **155 tests, 0 échec, 14 ignorés** (net10.0, ≈ 0,2 s). Les 14 ignorés sont les tests de bout en bout
-(`CRAPSHARP_E2E=1` pour les lancer, ≈ 40 s : `CRAPSHARP_E2E=1 dotnet test --filter Category=EndToEnd`, 14 réussis).
+`dotnet test` : **162 tests rapides réussis, 20 ignorés** (net10.0, vérification rapportée). Les tests de bout en bout
+ont été lancés séparément sur le projet `tests/CrapSharp.Tests/CrapSharp.Tests.csproj` avec `CRAPSHARP_E2E=1` :
+**26 réussis, 0 échec, 0 ignoré** (49 s, vérifié le 2026-11-01).
 L'outil publié, lancé sur le dépôt (`crapsharp . --threshold 10`), exécute lui-même les tests avec couverture, se
 note, et sort avec le code 0, **sans avertissement** : pire CRAP = 9,06 (`MemberNaming.MemberName`, CC 9, 90 %).
 `App.Run(Options)` (CRAP 10) a été découpé en `Run`, `Invalid`, `Score` : il n'apparaît plus parmi les pires.
@@ -130,6 +132,28 @@ SDK 10.0.401.
 
 L'auto-contrôle de l'outil sort toujours 0, sans avertissement. `--coverage-command` fonctionnait déjà avec MTP (essayé à la main).
 
+## Complément de l'étape 6 (après l'étape 10)
+
+Les manques listés à l'étape 6 sont comblés, sauf ce qui est noté plus bas.
+
+| Changement | Fichiers |
+|---|---|
+| Avertissement « source file(s) changed after the coverage report was written » avec `--coverage` / `--use-existing-coverage` | `App.cs` (`WarnIfStale`) |
+| Aucun membre mesurable : code 1 avant tout test ; avec `--filter` / `--changed` : note et code 0 | `App.cs` (`NoMembers`) |
+| 3 fixtures : `unusedproject`, `nomembers`, `constructs` ; 4 tests de bout en bout (`CompletenessTests`) ; 4 tests unitaires | `tests/fixtures`, `CompletenessTests.cs`, `AppTests.cs` |
+| Recoupement CA1502 étendu aux constructions rares : **5 écarts**, épinglés dans le test | `ComplexityOracleTests.cs`, PLAN.md §4.2 |
+| Nettoyage des dépôts git temporaires (fichiers en lecture seule) | `ToolHarness.cs` |
+
+**Décidé** : conserver la convention de CrapSharp face aux cinq écarts avec CA1502 (`default` d'un `switch`, `??=`,
+`catch`, bras de `switch` expression, motif `or`) et compter chaque étiquette `case`, même si plusieurs partagent un
+corps. La lecture du calcul Microsoft confirme les omissions de CA1502 ; la publication NIST nuance le comptage des
+étiquettes et l'usage du seuil sur une grande décision multiple (PLAN.md §4.2, §7 et §8). Le code de calcul n'a pas été
+changé. **À valider aussi** : l'avertissement « périmé » est informatif
+(code inchangé) ; « aucun membre » est une erreur sur un arbre complet et une simple note sur une sélection étroite.
+
+**Toujours non vérifié** : Linux et macOS ; les constructions de §4.2 absentes de `constructs` (par exemple `and` / `not`,
+`goto`, `lock`) ; une correspondance partielle de chemins dans un seul projet (seul un projet entier absent est testé).
+
 ## Usage
 
 ```bash
@@ -192,12 +216,12 @@ Vérifications plus anciennes (étape 4, avant les changements de l'étape 5) : 
 
 ## Reste à faire
 
-Voir la feuille de route (PLAN.md §6). Étapes 6, 7 et 10 faites, à relire ; prochaine étape : **8** (skill et README).
+Voir la feuille de route (PLAN.md §6). Étapes 6, 7 et 10 faites, à relire (convention de complexité décidée, §4.2 et §8) ; prochaine étape : **8** (skill et README).
 
 ## Comment vérifier
 
 ```bash
-dotnet test                                                     # 158 réussis, 15 ignorés
+dotnet test                                                     # 162 réussis, 20 ignorés
 dotnet publish src/CrapSharp -o ./out
 dotnet ./out/CrapSharp.dll . --threshold 10                     # lance les tests avec couverture, doit sortir 0
 ```
@@ -205,7 +229,7 @@ dotnet ./out/CrapSharp.dll . --threshold 10                     # lance les test
 Tests de bout en bout (lents, réseau NuGet) :
 
 ```bash
-CRAPSHARP_E2E=1 dotnet test --filter Category=EndToEnd          # 21 cas attendus
+CRAPSHARP_E2E=1 dotnet test --filter Category=EndToEnd          # 26 cas attendus
 ```
 
 Environnement : Windows 11, SDK .NET 10.0.401, runtime 10.0.12.

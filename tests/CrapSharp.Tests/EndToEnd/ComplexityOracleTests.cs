@@ -6,9 +6,10 @@ using Xunit;
 namespace CrapSharp.Tests.EndToEnd;
 
 /// <summary>
-/// Cross-checks the complexity against Microsoft's own code-metrics analyzer (rule CA1502, the metric Visual Studio
-/// shows), which walks the compiler's operation tree and shares no code with this tool. Setting its threshold to 1
-/// makes it report the complexity of every method. Slow (a build per fixture), so it is end-to-end only.
+/// Cross-checks the complexity against Microsoft's code-metrics analyzer (rule CA1502), which walks the compiler's
+/// operation tree and shares no code with this tool. Modern Visual Studio metrics use related source analysis, but
+/// these fixture values have not been checked in its UI. A threshold of 1 reports methods above 1; the absence of a
+/// diagnostic is interpreted as complexity 1 below. Slow (a build per fixture), so it is end-to-end only.
 /// </summary>
 [Trait("Category", "EndToEnd")]
 public partial class ComplexityOracleTests
@@ -24,6 +25,7 @@ public partial class ComplexityOracleTests
         { "failingtest", "src/Lib/Lib.csproj" },
         { "sameline", "src/Lib/Lib.csproj" },
         { "multitarget", "src/Lib/Lib.csproj" },
+        { "constructs", "src/Lib/Lib.csproj" },
     };
 
     [EndToEndTheory]
@@ -40,20 +42,37 @@ public partial class ComplexityOracleTests
         var build = new SystemProcessRunner().Run(
             "dotnet", ["build", Path.Combine(fixture.Root, project), "--no-incremental", "-p:TreatWarningsAsErrors=false"], fixture.Root);
         var oracle = Report().Matches(build.Combined)
-            .Select(m => (Name: m.Groups[1].Value, Complexity: int.Parse(m.Groups[2].Value)))
-            .Distinct()
-            .ToList();
+            .DistinctBy(m => m.Groups[1].Value)
+            .ToDictionary(m => m.Groups[1].Value, m => int.Parse(m.Groups[2].Value), StringComparer.Ordinal);
 
         var ours = Directory.EnumerateFiles(Path.Combine(fixture.Root, "src"), "*.cs", SearchOption.AllDirectories)
             .SelectMany(file => ComplexityCalculator.Analyze(File.ReadAllText(file), file))
-            .Select(method => (Name: ShortName(method.FullName), method.Complexity))
-            .Distinct()
-            .OrderBy(entry => entry.Name, StringComparer.Ordinal)
-            .ToList();
+            .DistinctBy(method => ShortName(method.FullName))
+            .ToDictionary(method => ShortName(method.FullName), method => method.Complexity, StringComparer.Ordinal);
 
         Assert.True(oracle.Count > 0, build.Combined);
-        Assert.Equal(ours, oracle.OrderBy(entry => entry.Name, StringComparer.Ordinal).ToList());
+        // The analyzer reports nothing for a complexity of 1.
+        var differences = ours
+            .Select(entry => (entry.Key, Ours: entry.Value, Oracle: oracle.GetValueOrDefault(entry.Key, 1)))
+            .Where(entry => entry.Ours != entry.Oracle)
+            .OrderBy(entry => entry.Key, StringComparer.Ordinal)
+            .ToList();
+        Assert.Equal(KnownDifferences(fixtureName), differences);
     }
+
+    // Constructs where PLAN.md 4.2 and CA1502 disagree, pinned so that a change on either side is noticed:
+    // CA1502 counts the `default` label of a switch statement (6 for 4 labels + default; 4.2 says 5), and counts nothing
+    // for `??=`, catch clauses, switch expression arms and `or` patterns (4.2 counts each).
+    private static List<(string Key, int Ours, int Oracle)> KnownDifferences(string fixtureName) => fixtureName == "constructs"
+        ?
+        [
+            ("Catches", 3, 1),
+            ("Coalesce", 4, 3),
+            ("OrPattern", 2, 1),
+            ("SwitchExpression", 3, 1),
+            ("SwitchStatement", 5, 6),
+        ]
+        : [];
 
     // "Lib.Decisions.Ten(int)" -> "Ten"; the analyzer calls top-level statements "<Main>$".
     private static string ShortName(string fullName)

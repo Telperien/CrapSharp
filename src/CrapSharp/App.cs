@@ -39,8 +39,11 @@ public sealed class App(IProcessRunner processes, TextWriter output, TextWriter 
         var (files, earlyExit) = Select(workspace, options);
         if (earlyExit is { } code)
             return code;
+        var methods = files.SelectMany(file => ComplexityCalculator.Analyze(File.ReadAllText(file), file)).ToList();
+        if (methods.Count == 0)
+            return NoMembers(options, files.Count);
         var coverage = new CoverageProvider(processes, error).Obtain(options, workspace);
-        return coverage.Succeeded ? Score(options, workspace, files, coverage) : ExitCodes.Error;
+        return coverage.Succeeded ? Score(options, workspace, files, methods, coverage) : ExitCodes.Error;
     }
 
     private static string? Invalid(Options options)
@@ -52,11 +55,21 @@ public sealed class App(IProcessRunner processes, TextWriter output, TextWriter 
             : null;
     }
 
-    private int Score(Options options, Workspace workspace, IReadOnlyList<string> files, CoverageResult coverage)
+    // Nothing to score before any test runs: an empty pass would look like a verified one, unless the selection was narrowed.
+    private int NoMembers(Options options, int fileCount)
     {
-        var methods = files.SelectMany(file => ComplexityCalculator.Analyze(File.ReadAllText(file), file)).ToList();
+        if (options.Filter is null && !options.Changed)
+            return Fail($"no measurable member found in the {fileCount} analyzed file(s)");
+        error.WriteLine("no measurable member in the selected file(s)");
+        return ExitCodes.Ok;
+    }
+
+    private int Score(
+        Options options, Workspace workspace, IReadOnlyList<string> files, IReadOnlyList<MethodComplexity> methods, CoverageResult coverage)
+    {
         if (coverage.Map is { } map && !CheckCoverage(methods, workspace, map))
             return ExitCodes.Error;
+        WarnIfStale(options, files, coverage.Reports);
         var context = new ReportContext(options.Changed, options.Filter, options.Mode, coverage.Reports, files.Count);
         var thresholdExitCode = Report(options, workspace, methods, coverage.Map, context);
         return coverage.RunFailed ? TestsFailed() : thresholdExitCode;
@@ -105,6 +118,17 @@ public sealed class App(IProcessRunner processes, TextWriter output, TextWriter 
             JsonReportWriter.Write(reports, Path.Combine(workspace.Root, ".metrics", "crap.json"), context);
         }
         return ThresholdExitCode(options.Threshold, reports);
+    }
+
+    // Reports that were not just produced by this run may predate edits: their line numbers then no longer fit the sources.
+    private void WarnIfStale(Options options, IReadOnlyList<string> files, IReadOnlyList<string> reports)
+    {
+        if (options.Mode is not (CoverageMode.Explicit or CoverageMode.UseExisting) || reports.Count == 0)
+            return;
+        var written = reports.Max(File.GetLastWriteTimeUtc);
+        var edited = files.Count(file => File.GetLastWriteTimeUtc(file) > written);
+        if (edited > 0)
+            error.WriteLine($"warning: {edited} source file(s) changed after the coverage report was written; the scores may be stale");
     }
 
     // Only files with a measurable member count: a file of constants has nothing the coverage could say about it.

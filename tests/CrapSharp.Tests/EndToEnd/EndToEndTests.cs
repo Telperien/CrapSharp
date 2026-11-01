@@ -13,7 +13,7 @@ public class EndToEndTests
 {
     private const int Precision = 6;
 
-    private static void AssertEntry(Entry entry, int complexity, double coveragePercent, double crap)
+    internal static void AssertEntry(Entry entry, int complexity, double coveragePercent, double crap)
     {
         Assert.Equal(complexity, entry.Complexity);
         Assert.Equal(coveragePercent, entry.Coverage);

@@ -46,6 +46,7 @@ capables d'accéder au dépôt et d'exécuter les outils. L'intégration Spec Ki
 | C | Contrôle de duplication : choix, intégration et validation | à faire |
 | D | Distribution et essai de bout en bout : CLI/CI autonomes, skill utilisable par plusieurs agents | à faire |
 | E | Adaptateur Spec Kit prêt à installer, sans dépendance du cœur à Spec Kit | à terme |
+| F | Présentation finale du projet et découvrabilité pour les personnes et les agents | à faire en dernier |
 
 Pour les mutations, on utilise **Stryker.NET** tel quel, un outil existant et mature : pas de réécriture.
 
@@ -58,6 +59,8 @@ Pour les mutations, on utilise **Stryker.NET** tel quel, un outil existant et ma
 4. **Contrôle de duplication** utilisable depuis le skill et en CI, avec un verdict reproductible.
 5. **Guide d'usage autonome** : installation, CLI, CI et skill pour les environnements d'agent vérifiés.
 6. À terme : **adaptateur Spec Kit prêt à installer** et exemple exécutable sur un vrai projet .NET.
+7. **Description publique** : README, résumé du dépôt, métadonnées du package et du skill, rédigés à partir des
+   fonctions réellement livrées.
 
 ## 4. Conventions de mesure (spécification)
 
@@ -93,9 +96,34 @@ CC = 1 + nombre de points de décision dans le membre.
 | lambdas, fonctions locales | comptées **dans le membre englobant** | |
 | `goto`, `break`, `return`, `throw`, `is` simple, `not` | 0 | |
 
-Cette convention suit McCabe et crapper (chaque étiquette de `switch` compte, comme pour Java chez crapper). Elle peut
-différer de Visual Studio ou de ReportGenerator. **Mesuré à l'étape 7** : elle coïncide avec l'analyseur Microsoft CA1502 (celui
-de Visual Studio) sur toutes les méthodes des fixtures ; ReportGenerator affiche une autre complexité (voir §6).
+**Écarts mesurés avec l'analyseur Microsoft CA1502** (fixture `constructs`, épinglés dans `ComplexityOracleTests`) :
+
+| Construction | CrapSharp (§4.2) | CA1502 |
+|---|---|---|
+| `switch` instruction à 4 `case` + `default` | 5 (`default` : 0) | 6 (`default` compté) |
+| `??=` | +1 | 0 (`first ?? second ?? "a"` puis `??=` : 3 au total au lieu de 4) |
+| `catch` (deux clauses) | +1 chacune → 3 | rien (1) |
+| bras de `switch` expression | +1 chacun sauf le `_` final → 3 | rien (1) |
+| motif `or` (`is "a" or "b"`) | +1 → 2 | rien (1) |
+
+Les autres constructions de la fixture (`if`/`else if`, `for`/`foreach`/`while`/`do`, `when`, `?:`, `&&`/`||`, `??`, `?.`,
+lambda) donnent le même nombre. **La convention n'a pas été modifiée.** La [source du calcul de métriques Microsoft](https://source.dot.net/Microsoft.CodeAnalysis.Analyzers/src/roslyn/src/RoslynAnalyzers/Utilities/Compiler/CodeMetrics/MetricsHelper.cs.html)
+confirme que CA1502 compte les `CaseClause`, `Coalesce`, `Conditional`, `ConditionalAccess`, boucles et certains opérateurs
+binaires, mais pas les quatre constructions indiquées « rien (1) ». La documentation Microsoft indique que les métriques
+modernes de Visual Studio et de la CLI utilisent une analyse du code source similaire ; ces cinq exemples n'ont toutefois
+pas été mesurés dans l'interface Visual Studio.
+
+La convention actuelle est une **approximation syntaxique de la complexité du graphe de contrôle**, pas une définition
+« McCabe stricte » prescrivant un compte par mot-clé. La [publication NIST de Watson et McCabe](https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication500-235.pdf)
+compte les issues distinctes d'une décision multiple et modélise en général plusieurs étiquettes menant au même corps
+comme une seule issue. **Choix retenu pour CrapSharp : une étiquette = une issue**, y compris dans
+`case 3: case 4:` ; chaque valeur déclarée reste une entrée distincte à vérifier. C'est l'autre modélisation cohérente
+mentionnée par le NIST, mais elle peut donner une CC supérieure au modèle qui regroupe les étiquettes. `default` ou le
+chemin implicite sans correspondance occupe déjà
+l'issue de base dans la convention actuelle. La même publication recommande de **mesurer** un grand `switch`, puis
+permet une exception motivée au seuil pour une décision multiple simple ; elle déconseille de supprimer ses branches
+du score. Les `catch` et les constructions C# modernes demandent une convention de modélisation publiée, car le texte
+historique n'impose pas un compte syntaxique unique. ReportGenerator affiche une autre complexité (voir §6).
 
 ### 4.3 Ce qui est mesuré
 
@@ -175,7 +203,7 @@ src/CrapSharp/                 net10.0, RollForward=Major, Roslyn (Microsoft.Cod
   Coverage/                    CoberturaParser, CoverageMap, CoverageReportFinder, CoverageProvider
   Scoring/                     CrapCalculator, MethodReport, ReportFormatter, JsonReportWriter, ReportContext, ThresholdCheck, Truncation
   Projects/ProjectDiscovery.cs, Git/ChangedFiles.cs, Processes/ (IProcessRunner, SystemProcessRunner)
-tests/CrapSharp.Tests/         xUnit (158 tests rapides + 21 cas de bout en bout, voir étape 6), FakeProcessRunner, TempWorkspace
+tests/CrapSharp.Tests/         xUnit (162 tests rapides + 26 cas de bout en bout, voir étape 6), FakeProcessRunner, TempWorkspace
 tests/CrapSharp.Tests/EndToEnd/ outil publié lancé sur tests/fixtures (CRAPSHARP_E2E=1)
 tests/fixtures/                mini-solutions réelles ; projets stockés en *.csproj.template
 skill/<nom>/SKILL.md           phase B
@@ -198,6 +226,7 @@ skill/<nom>/SKILL.md           phase B
 | 11 | Contrôle de duplication (phase C) : choisir entre un outil existant (ex. jscpd) et une brique Roslyn, puis l'intégrer et le valider | à faire |
 | 12 | Essai de livraison (phase D) : installation reproductible, CLI/CI, skill dans plusieurs agents et pilote sur un projet .NET réel | à faire |
 | 13 | Adaptateur Spec Kit (phase E) prêt à installer : skill, règles de constitution, contrôles du workflow et exemple de projet | à terme |
+| 14 | Description finale (phase F) : expliquer le problème, les outils, l'usage et les limites ; publier les résumés utiles à la découverte | à faire en dernier |
 
 **Étape 6 en détail.** Des mini-solutions dans `tests/fixtures/`, chacune avec un vrai projet de tests et coverlet.
 L'outil généré par **`dotnet publish`** est lancé dessus (pas `dotnet run`, qui verrouille la DLL sous Windows), et on vérifie le tableau,
@@ -235,14 +264,14 @@ examiné particulièrement sur les lambdas, les fonctions locales et plusieurs m
   périmètre analysé et la provenance de la couverture. Éviter qu'un rapport `--changed` / `--filter` passe pour un
   rapport complet.
 
-**Résultats de l'étape 7** (mesurés le 2026-11-01, ReportGenerator 5.5.12, coverlet 6.0.0, SDK 10.0.401) :
+**Résultats de l'étape 7** (complétés par le recoupement des constructions de §4.2, voir cette section) (mesurés le 2026-11-01, ReportGenerator 5.5.12, coverlet 6.0.0, SDK 10.0.401) :
 
 - *Oracle de complexité indépendant.* L'analyseur Microsoft **CA1502** (règle de métriques de code de `Microsoft.CodeAnalysis.NetAnalyzers`,
   même métrique que Visual Studio ; seuil réglé à 1 par `CodeMetricsConfig.txt` pour qu'il rapporte toutes les méthodes) ne
   partage aucun code avec CrapSharp. Le test `ComplexityOracleTests` (5 fixtures, de bout en bout) vérifie que notre CC est
   **identique** à la sienne pour chaque méthode : `Ten` 10, `Score` 5 (fonction locale et lambda comprises), `Evens` 3,
   `LoadAsync` 2, `Sign` 3, instructions de niveau supérieur 2, etc. Les conventions de §4.2 sont donc cohérentes avec cet outil
-  de référence pour les constructions des fixtures ; les autres constructions de §4.2 ne sont pas recoupées.
+  de référence pour les constructions des fixtures ; les constructions plus rares (fixture `constructs`) divergent : voir §4.2.
 - *ReportGenerator n'est pas un oracle de CC.* Il affiche la complexité du Cobertura de coverlet, calculée sur l'IL : `Ten` 18
   (au lieu de 10), `Sign` 4 (3), `Evens` 4 (3), `LoadAsync` 4 (2), `Score` 6 (5) avec la fonction locale `Weight` comptée à part.
   Son CRAP en découle (`Ten` : 18 au lieu de 10). Même seuil, verdicts différents.
@@ -273,9 +302,15 @@ projets des fixtures sont en `*.csproj.template` pour que l'outil, lancé sur ce
 Écarts entre le calcul à la main et coverlet : un seul, sur `closures` (voir §4.4, la ligne `};` du lambda). Les autres
 valeurs (CC, lignes, CRAP brut, code de sortie) ont été retrouvées telles que calculées.
 
-**Reste de la liste de l'étape 6, non couvert de bout en bout** : un rapport réellement périmé (seul le test
-unitaire existe) ; `--changed` dans un vrai dépôt git (sélection vide, fichier modifié) ; une correspondance partielle de
-chemins (testée seulement avec des rapports écrits à la main) ; un projet sans aucun membre.
+**Complément de l'étape 6** (4 tests de bout en bout dans `CompletenessTests`, 3 fixtures de plus : `unusedproject`,
+`nomembers`, `constructs`) :
+- *Rapport périmé* : avec `--coverage` ou `--use-existing-coverage`, un avertissement signale les fichiers sources modifiés
+  après l'écriture du plus récent rapport (« may be stale »). Il est informatif : le code de sortie ne change pas.
+- *Projet de production que aucun test n'utilise* (`unusedproject`) : coverlet n'en parle pas ; avertissement par projet, 0 %.
+- *Aucun membre mesurable* (`nomembers`) : code 1 avant tout lancement de test ; avec `--filter` / `--changed`, simple note
+  et code 0 (une sélection étroite sans membre n'est pas une erreur).
+- *`--changed` dans un vrai dépôt git* : suit `git status` ; rien de modifié → code 0 et rien n'est lancé.
+- *Recoupement avec CA1502 des autres constructions de §4.2* (fixture `constructs`) : voir §4.2, **cinq écarts** documentés ; convention conservée (§8).
 
 **Étape 10 — Microsoft.Testing.Platform (MTP).** Un projet de tests est reconnu comme MTP par son fichier projet
 (`EnableMSTestRunner`, `UseMicrosoftTestingPlatformRunner`, `TestingPlatformDotnetTestSupport`, `MSTest.Sdk`, `xunit.v3`,
@@ -322,6 +357,23 @@ commande exacte dans le skill. Vérifier le temps d'exécution et les faux posit
 - décider séparément si un plugin est nécessaire pour distribuer le skill dans ChatGPT web/mobile. Cette distribution
   ne conditionne pas l'usage de la CLI et du skill dans les hôtes locaux déjà vérifiés.
 
+**Distribution au-delà du dépôt GitHub (à préparer aux étapes 9, 12 et 14).** Le dépôt héberge les sources ; il ne
+publie pas automatiquement l'outil dans les catalogues ni n'installe le skill chez les utilisateurs. Garder une seule
+source du `SKILL.md` et fournir des procédures d'installation vérifiées, sans maintenir plusieurs copies divergentes.
+
+| Canal | Action et preuve attendue | Priorité |
+|---|---|---|
+| [NuGet.org](https://learn.microsoft.com/en-us/nuget/nuget-org/publish-a-package) | Publier le `dotnet tool` après choix du nom, de la licence et de la version ; renseigner description, README, dépôt et tags ; vérifier `dotnet tool install`, `restore` et l'exécution depuis une solution neuve. Le packaging local de l'étape 9 précède cette publication. | Essentiel pour la CLI publique |
+| [Claude Code](https://code.claude.com/docs/en/skills), [Codex / ChatGPT desktop](https://learn.chatgpt.com/docs/build-skills) | Fournir le skill au format ouvert et les instructions propres à chaque hôte (`.claude/skills/`, `.agents/skills/` ou installation personnelle) ; vérifier sa détection, son invocation et l'accès réel à la CLI sur un projet utilisateur. | Essentiel pour le skill portable |
+| [GitHub Copilot dans VS Code](https://code.visualstudio.com/docs/agent-customization/agent-skills) et autres agents compatibles | Essayer au moins un troisième hôte, avec son emplacement et sa commande d'installation documentés ; n'annoncer comme pris en charge que les hôtes validés. | Extension souhaitable |
+| [skills.sh](https://www.skills.sh/docs/cli) | Vérifier l'installation depuis le dépôt avec `npx skills add` et la présence éventuelle dans son annuaire ; mesurer la découverte sans supposer qu'un référencement garantit une invocation. | Découverte optionnelle |
+| [Marketplace Claude Code](https://code.claude.com/docs/en/plugin-marketplaces), [répertoire de plugins ChatGPT/Codex](https://developers.openai.com/plugins/deploy/submission) | Si l'installation manuelle freine l'adoption, empaqueter le même skill dans les formats de plugin requis et tester leur publication propre à chaque plateforme ; une soumission publique OpenAI passe par une revue. | À décider après le pilote |
+
+Documenter pour chaque canal la version publiée, la procédure de mise à jour et le niveau de support. L'absence de
+plugin ou de serveur MCP n'empêche pas l'usage local de la CLI et du skill ; ces intégrations doivent répondre à un
+besoin constaté. Sur le web et le mobile, vérifier séparément l'accès au dépôt, à .NET et à un terminal : la seule
+présence du skill dans un catalogue ne lui permet pas d'exécuter le contrôle CRAP sur le code de l'utilisateur.
+
 **Étape 13 — adaptation à Spec Kit.** Fournir un paquet ou une procédure d'installation reproductible pour un projet
 qui utilise déjà Spec Kit : rendre le skill disponible dans l'agent choisi, proposer les règles de qualité pour la
 constitution et enregistrer les contrôles à lancer après `implement`. Préférer une extension ou un overlay installable
@@ -330,6 +382,16 @@ constitution et enregistrer les contrôles à lancer après `implement`. Préfé
 procédure publiée, vérifier que l'agent peut invoquer le skill, que les commandes s'exécutent et qu'un échec bloque
 le workflow ou la CI comme prévu. L'adaptateur réutilise le skill et les commandes de l'étape 12 ; le cœur ne dépend
 pas de Spec Kit et ses instructions ne sont pas dupliquées dans l'adaptateur.
+
+**Étape 14 — présentation et découvrabilité.** Finaliser le texte de référence de §10 après validation des fonctions
+réellement livrées. Le placer au début du README avec une installation et un premier exemple concrets ; adapter sa
+version courte à la description du dépôt, aux topics GitHub, aux métadonnées NuGet et au champ `description` du
+`SKILL.md` (et du plugin, s'il existe). Écrire les déclencheurs du skill en termes de tâches C#/.NET que l'utilisateur
+confierait à un agent, ainsi que ses prérequis et limites. Choisir la ou les langues de publication, puis faire relire
+le texte par un développeur .NET qui découvre le projet et essayer quelques recherches et demandes d'agent réalistes.
+Les termes de recherche doivent apparaître dans des explications utiles ; une liste de mots-clés ne remplace pas une
+description exacte ([Google Search Central](https://developers.google.com/search/docs/appearance/snippet),
+[documentation officielle OpenAI sur les descriptions de skills](https://learn.chatgpt.com/docs/build-skills)).
 
 **Critère de valeur ajoutée.** À l'étape 7 puis sur un pilote, comparer trois situations : (1) IA + Spec Kit avec sa
 configuration initiale ; (2) IA + Spec Kit configuré pour la qualité .NET avec ReportGenerator, Stryker.NET et l'outil
@@ -352,7 +414,8 @@ attendre de trancher tous les points avant de commencer l'étape 6.
 | 6 | Projet de tests exécuté avec succès mais sans rapport, alors que d'autres rapports existent ; sélection vide avec `--changed` ou `--filter` | **Pris provisoirement à l'étape 6, à valider à la relecture** : avertissement nommant le projet (0 % pour ce que lui seul couvre) ; erreur si aucun projet n'a de rapport ; `--filter` sans correspondance → 1, `--changed` sans changement → 0 (§4.4). |
 | 6–7 | Une ou plusieurs cibles .NET, `DefineConstants`, fichiers `Compile`, projets hors racine de `.sln`, `Directory.Build.props` | Choisir le périmètre réellement compilé que l'outil promet ; mesurer les écarts sur fixtures avant de décider du support MSBuild. |
 | 7 | Couverture des branches de Cobertura | Conserver la couverture par lignes pour le CRAP tant qu'un cas réel ne justifie pas une autre convention ; documenter l'écart avec les autres outils. |
-| 7 | Réutiliser ReportGenerator ou poursuivre le calcul propre à CrapSharp | **Proposé, à valider** : poursuivre le calcul propre (CC alignée sur CA1502, gate avec code de sortie) ; ReportGenerator n'a ni gate ni la même CC (§6, résultats de l'étape 7). |
+| 8 ou plus tard | Dérogation au gate pour une grande table de correspondance simple | Mesurer le besoin sur le pilote ; garder sa CC mesurée même si une dérogation motivée au seuil est finalement prévue. |
+| 7 | Réutiliser ReportGenerator ou poursuivre le calcul propre à CrapSharp | **Proposé, à valider** : poursuivre le calcul propre (CC recoupée avec CA1502, écarts en §4.2, gate avec code de sortie) ; ReportGenerator n'a ni gate ni la même CC (§6, résultats de l'étape 7). |
 | 8 | Nom du skill (`/crap-mode` pour CRAP seul, `/ub-dotnet` ou autre pour la discipline complète) | Choisir un nom cohérent avec son périmètre et vérifier l'invocation dans les hôtes visés. |
 | 8, 12 | Règle de mutation Stryker.NET : quand lancer le contrôle et quel verdict rend la CI rouge | Séparer le retour rapide du contrôle potentiellement long ; documenter la commande, le seuil retenu et un cas d'échec attendu. |
 | 9, 12 | Identifiant et version du package, mode de distribution, licence du projet | Tester au moins un manifeste `dotnet tool` depuis une copie propre ; décider ensuite de la publication NuGet. Fournir une licence explicite avant toute diffusion publique. |
@@ -360,8 +423,9 @@ attendre de trancher tous les points avant de commencer l'étape 6.
 | 10 | Support Microsoft.Testing.Platform | **Fait** (voir §6, étape 10). Tester `Microsoft.Testing.Extensions.CodeCoverage` (`--coverage --coverage-output-format cobertura`) et `coverlet.MTP` (`--coverlet --coverlet-output-format cobertura`) ; intégrer la voie retenue ou documenter la limite ([documentation .NET](https://learn.microsoft.com/en-us/dotnet/core/testing/microsoft-testing-platform-code-coverage)). |
 | 11 | Détecteur de duplication, seuil, exclusions et coût | Comparer un outil existant (ex. jscpd) à une brique Roslyn sur des exemples C# ; le rang `0,8` de dryer n'est pas directement transférable (§6). |
 | 12 | Hôtes testés pour le skill et niveau de support promis | Vérifier au minimum Claude Code et Codex / ChatGPT avec accès au dépôt et à la CLI ; publier une matrice « testé / documenté / non pris en charge ». Un skill seul ne donne pas accès à un shell. |
-| 12 ou plus tard | Distribution du skill dans ChatGPT web/mobile | Décider si un plugin est utile ; l'usage CLI/CI et les hôtes locaux ne dépendent pas de cette option. |
+| 12 ou plus tard | Distribution dans les catalogues et autres hôtes | Décider après le pilote si Copilot, skills.sh, un marketplace Claude et/ou un plugin public ChatGPT/Codex justifient leur maintenance ; vérifier chaque canal avant d'annoncer son support. L'usage CLI/CI et les hôtes locaux ne dépendent pas de ces options. |
 | 13 | Forme de l'adaptateur Spec Kit | Choisir extension ou overlay installable selon les possibilités vérifiées sur le pilote ; une seule procédure publiée doit rendre le skill et les contrôles disponibles, sans recopier les instructions à la main. |
+| 14 | Langue et métadonnées publiques | Choisir français, anglais ou les deux ; aligner README, résumé GitHub, topics, NuGet et description du skill sur les fonctions livrées et les hôtes réellement testés. |
 
 L'export EDN compatible `uml-viewer` reste hors périmètre, sauf demande explicite.
 
@@ -375,7 +439,10 @@ passent. L'étape 13 valide ensuite Spec Kit ; elle n'est pas un prérequis à l
 - Outil autonome en .NET (pas d'ajout du C# à crapper en Python).
 - JSON plutôt que l'EDN de crapper ; couverture en pourcentage, chemins absolus.
 - Rapprochement par plages de lignes, pas par nom CLR.
-- Chaque `case` compte (McCabe, crapper) ; lambdas et fonctions locales dans le membre englobant.
+- Conserver une CC syntaxique propre à CrapSharp : compter `catch`, `switch` expression, `??=` et motifs `and` / `or`
+  même si CA1502 n'en compte pas certains. Une étiquette `case` = une issue, y compris si plusieurs étiquettes partagent
+  un corps ; `default` et le `_` final sans garde n'ajoutent pas d'unité (§4.2). Lambdas et fonctions locales restent
+  comptées dans le membre englobant. Ne pas ajouter `complexityVs` sans usage concret.
 - Seuil strict (`≥ N` échoue) ; affichage tronqué.
 - Cible .NET 10 (LTS), car .NET 8 n'est plus supporté à partir du 10 novembre 2026.
 - Mutations : Stryker.NET, sans réécriture.
@@ -419,3 +486,34 @@ Texte complet dans [REVIEWS.md](REVIEWS.md).
 **Pour la prochaine review**, regarder en priorité : les choix de comportement pris à l'étape 6 sans décision préalable
 (sources de couverture exclusives, sélection vide, fenêtre de 10 minutes de `--use-existing-coverage`, avertissement
 pour un projet de tests sans rapport), les manques listés en §6, puis l'étape 7.
+
+## 10. Description de référence du projet (brouillon à finaliser à l'étape 14)
+
+**CrapSharp** vise à fournir aux équipes C# et .NET une façon reproductible de repérer le code complexe et peu testé,
+que le développement soit effectué par une personne, par Claude, par ChatGPT/Codex ou dans un processus Spec Kit.
+Son outil en ligne de commande calcule un score CRAP par méthode à partir de la complexité cyclomatique du code C# et
+de la couverture de tests Cobertura. Il affiche les méthodes à examiner et peut faire échouer une intégration continue
+quand un seuil défini par l'équipe est atteint.
+
+Le projet comprend aussi un skill d'ingénierie logicielle, inspiré des principes d'ub-mode et rédigé pour .NET. Ce
+skill doit guider un agent dans la compréhension du comportement attendu, l'écriture de tests utiles, la modification
+minimale du code et le refactoring. Il lui indique quand exécuter CrapSharp, Stryker.NET pour les tests de mutation et
+le contrôle de duplication retenu, puis comment interpréter les résultats. Les commandes de contrôle restent
+utilisables directement par les développeurs et en CI, indépendamment de l'agent. Spec Kit pourra les intégrer par un
+adaptateur prêt à installer, sans être nécessaire au fonctionnement du cœur.
+
+L'intérêt recherché est de rendre les pratiques de qualité et leurs preuves plus cohérentes d'un projet ou d'un agent
+à l'autre : mêmes conventions de mesure, mêmes commandes et diagnostics que l'équipe peut relancer. Le score CRAP
+signale un risque ; il ne démontre ni la correction du programme ni la qualité de tous ses tests. Le rapprochement
+actuel de la couverture aux méthodes s'appuie sur des plages de lignes et comporte des limites documentées. Les
+hôtes, configurations .NET et collecteurs effectivement pris en charge devront être annoncés après validation.
+
+**Résumé court proposé pour le dépôt (FR)** : CrapSharp associe score CRAP par méthode C#, couverture de tests et
+skill d'ingénierie .NET pour guider les agents et fournir des contrôles reproductibles en ligne de commande et en CI.
+
+**Short description for discovery (EN)**: CrapSharp is a C#/.NET CRAP score CLI and agent skill for test-driven code
+quality, combining per-method complexity and coverage with mutation and duplication checks.
+
+**Skill description draft (EN)**: Use when implementing or refactoring C#/.NET code with an agent and you want a
+test-first workflow backed by per-method CRAP scores, mutation testing and duplication checks. Requires access to
+the repository and the relevant command-line tools.
