@@ -458,3 +458,10 @@ La documentation que j'avais lue donnait `--dev <dossier>` comme option avec val
 
 **Non vérifié** : l'exécution réelle de la commande par un agent (Claude Code, Codex), l'enchaînement `implement` puis hook, l'effet des règles de
 constitution, et les agents autres que Claude. Les hooks facultatifs dépendent du texte des commandes `speckit-implement`, qui peut changer.
+
+**Essai de la commande dans Claude Code** (`/speckit-crapsharp-gate main` sur `speckit-test`, une méthode jamais testée) : l'agent a lancé les tests, le gate
+CRAP avec `--changed-since main` (sortie 0, `Untouched` à 6,00), Stryker (sortie 2, 0 % : 3 survivants, « coverage capture failed » **expliqué ici par
+l'absence de tout test de `Untouched`**, pas par l'astuce du skill) et jscpd (0 clone, après une première erreur de dossier qu'il a corrigée). Il a déclaré
+la porte **non verte** et n'a rien modifié, car on ne lui demandait qu'un rapport. À ma demande suivante, il a ajouté un test de bornes de `Untouched`
+(15 tests verts), CRAP 2,00, Stryker 100 % (3 tués), et a dit ne pas avoir relancé jscpd. Le comportement est celui voulu : verdict honnête, correction
+seulement sur demande. **Non vérifié** : le déclenchement par le hook `after_implement`, Codex et les autres agents.

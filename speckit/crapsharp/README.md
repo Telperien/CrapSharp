@@ -3,7 +3,8 @@
 Adds `/speckit.crapsharp.gate` (skills agents: `/speckit-crapsharp-gate`) and an optional `after_implement` hook that runs it.
 The command runs `crapsharp`, Stryker.NET and jscpd on the C# code just implemented, and says what it could not verify.
 
-**Status: not validated.** See `docs/using-the-skill.md` of the repository for what has been tested.
+**Status: tried once.** The command was run by Claude Code on a throwaway project: it ran all four checks, reported a failing
+mutation score honestly and fixed it when asked. The `after_implement` hook, Codex and the other agents are **not tried**.
 
 ```bash
 specify extension add --dev path/to/CrapSharp/speckit/crapsharp
