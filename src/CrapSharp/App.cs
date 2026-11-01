@@ -58,7 +58,7 @@ public sealed class App(IProcessRunner processes, TextWriter output, TextWriter 
     // Nothing to score before any test runs: an empty pass would look like a verified one, unless the selection was narrowed.
     private int NoMembers(Options options, int fileCount)
     {
-        if (options.Filter is null && !options.Changed && options.Exclude.Count == 0)
+        if (options.Filter is null && !options.Changed && options.ChangedSince is null && options.Exclude.Count == 0)
             return Fail($"no measurable member found in the {fileCount} analyzed file(s)");
         error.WriteLine("no measurable member in the selected file(s)");
         return ExitCodes.Ok;
@@ -70,7 +70,7 @@ public sealed class App(IProcessRunner processes, TextWriter output, TextWriter 
         if (coverage.Map is { } map && !CheckCoverage(methods, workspace, map))
             return ExitCodes.Error;
         WarnIfStale(options, files, coverage.Reports);
-        var context = new ReportContext(options.Changed, options.Filter, options.Mode, coverage.Reports, files.Count, options.Exclude);
+        var context = new ReportContext(options.Changed, options.Filter, options.Mode, coverage.Reports, files.Count, options.Exclude, options.ChangedSince);
         var thresholdExitCode = Report(options, workspace, methods, coverage.Map, context);
         return coverage.RunFailed ? TestsFailed() : thresholdExitCode;
     }
@@ -83,15 +83,16 @@ public sealed class App(IProcessRunner processes, TextWriter output, TextWriter 
         var files = workspace.SourceFiles.Where(file => IsSelected(file, options)).ToList();
         if (files.Count == 0)
             return ([], Fail(NothingSelected(options, workspace.SourceFiles.Count)));
-        return options.Changed ? KeepChanged(workspace, files) : (files, null);
+        return options.Changed || options.ChangedSince is not null ? KeepChanged(workspace, files, options) : (files, null);
     }
 
     // Nothing changed is a legitimate empty selection (success); a typo in --filter is not (see Select).
-    private (IReadOnlyList<string> Files, int? ExitCode) KeepChanged(Workspace workspace, IReadOnlyList<string> files)
+    private (IReadOnlyList<string> Files, int? ExitCode) KeepChanged(Workspace workspace, IReadOnlyList<string> files, Options options)
     {
         try
         {
-            var changed = new ChangedFiles(processes).Find(workspace.Root);
+            var finder = new ChangedFiles(processes);
+            var changed = options.ChangedSince is { } reference ? finder.FindSince(workspace.Root, reference) : finder.Find(workspace.Root);
             var kept = files.Where(changed.Contains).ToList();
             if (kept.Count > 0)
                 return (kept, null);

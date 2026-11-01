@@ -30,7 +30,8 @@ public sealed record Options(
     string? CoverageCommand = null,
     string? Filter = null,
     bool Help = false,
-    IReadOnlyList<string>? exclude = null)
+    IReadOnlyList<string>? exclude = null,
+    string? ChangedSince = null)
 {
     /// <summary>--exclude fragments: files whose path contains any of them are left out.</summary>
     public IReadOnlyList<string> Exclude { get; } = exclude ?? [];
@@ -51,6 +52,8 @@ public sealed record Options(
         Selection:
           --changed                   only the .cs files git sees as modified, added or untracked
                                       (none changed: exit 0, nothing scored)
+          --changed-since <ref>       only the .cs files changed since <ref>: committed after the common
+                                      ancestor of <ref> and HEAD, modified or untracked (a pull request check)
           --filter <fragment>         only the files whose path contains the fragment
                                       (no match: exit 1)
           --exclude <fragment>        leave out the files whose path contains the fragment (repeatable)
@@ -73,7 +76,7 @@ public sealed record Options(
         ["--no-coverage", "--coverage", "--coverage-command", "--use-existing-coverage"];
 
     private static readonly HashSet<string> ValueOptions =
-        ["--coverage", "--threshold", "--coverage-command", "--filter", "--exclude"];
+        ["--coverage", "--threshold", "--coverage-command", "--filter", "--exclude", "--changed-since"];
 
     public CoverageMode Mode
     {
@@ -102,6 +105,8 @@ public sealed record Options(
         if (positionals.Count > 1)
             throw new OptionsException($"Only one path can be given, got: {string.Join(", ", positionals)}");
         RejectSeveralCoverageSources(flags, values);
+        if (flags.Contains("--changed") && values.ContainsKey("--changed-since"))
+            throw new OptionsException("Choose one of --changed and --changed-since");
         return new Options(
             positionals.SingleOrDefault() ?? ".",
             values.GetValueOrDefault("--coverage") ?? [],
@@ -112,7 +117,8 @@ public sealed record Options(
             LastValue(values, "--coverage-command"),
             LastValue(values, "--filter"),
             flags.Contains("--help") || flags.Contains("-h"),
-            values.GetValueOrDefault("--exclude"));
+            values.GetValueOrDefault("--exclude"),
+            LastValue(values, "--changed-since"));
     }
 
     private static void Tokenize(

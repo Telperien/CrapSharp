@@ -37,7 +37,8 @@ The tool runs the tests with coverage, prints a table (worst score first) and wr
 |---|---|
 | `[path]` | folder, `.sln`, `.csproj` or `.cs` (default: `.`) |
 | `--threshold <N>` | exit code 2 unless every method is strictly below N (N finite, above 0) |
-| `--changed` | only the `.cs` files modified according to git |
+| `--changed` | only the `.cs` files modified according to git (uncommitted changes) |
+| `--changed-since <ref>` | only the `.cs` files changed since `<ref>`: committed after the common ancestor of `<ref>` and `HEAD`, modified or untracked. For a pull request check, for example `--changed-since origin/main`; in CI check out with `fetch-depth: 0` |
 | `--filter <fragment>` | only the files whose path contains the fragment |
 | `--exclude <fragment>` | leave out the files whose path contains the fragment (repeatable), for example engine code your tests cannot run |
 | `--coverage <report.xml>` | use this Cobertura report (repeatable), run nothing |
@@ -53,7 +54,8 @@ display (`crap`) and the exact score compared with the threshold (`crapRaw`).
 
 ## Using the skill
 
-Installation in Claude Code and Codex, and a table of what has and has not been tested: [docs/using-the-skill.md](docs/using-the-skill.md).
+Installation in Claude Code, Codex and GitHub Copilot, and a table of what has and has not been tested:
+[docs/using-the-skill.md](docs/using-the-skill.md).
 
 ## Mutation testing
 

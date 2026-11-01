@@ -17,7 +17,7 @@
 | 9 | Packaging `dotnet tool` | **fait en local**, à relire (pas de publication NuGet) ; licence MIT ajoutée |
 | 10 | Microsoft.Testing.Platform | **fait, à relire** |
 | 11 | Duplication | **jscpd adopté** (provisoire), à relire |
-| 12 | Livraison autonome et essais du skill dans plusieurs agents | **en cours** : CI faite |
+| 12 | Livraison autonome et essais du skill dans Claude Code, Codex et GitHub Copilot (VS Code) | **en cours** : CI faite ; trois hôtes et pilote externe à essayer |
 | 13 | Adaptateur Spec Kit | à terme |
 | 14 | Description publique et découvrabilité | à faire en dernier |
 
@@ -225,12 +225,12 @@ Linux comme sur Windows. Le mécanisme exact (qui attend quoi) n'est pas établi
   10 sans couverture, **score 83,33 %**, 55 s, code 0. Les 65 survivants n'ont pas été examinés : ils sont une piste d'amélioration des tests.
 
 **Guide et matrice** : `docs/using-the-skill.md` (en anglais) donne les dossiers d'installation et l'invocation pour Claude Code
-(`.claude/skills/<nom>/SKILL.md`) et Codex (`.agents/skills/<nom>/SKILL.md`), tirés des pages officielles lues par un sous-agent ; la page
-Claude Code était tronquée et en partie résumée. Le tableau « testé / documenté / non pris en charge » y figure aussi. Aucun des deux
-hôtes n'a été essayé : c'est écrit tel quel.
+(`.claude/skills/<nom>/SKILL.md`), Codex (`.agents/skills/<nom>/SKILL.md`) et GitHub Copilot en mode Agent dans VS Code
+(`.github/skills/<nom>/SKILL.md`). Le tableau « testé / documenté / non pris en charge » y figure aussi. Aucun des trois hôtes
+n'a été essayé : c'est écrit tel quel. Copilot CLI et les autres surfaces Copilot demandent une validation séparée.
 
-**Reste de l'étape 12** : essai réel du skill dans Claude Code et Codex / ChatGPT (de ton côté) ; un pilote sur un projet qui n'est pas le
-nôtre.
+**Reste de l'étape 12** : essai réel du skill dans Claude Code, Codex / ChatGPT et GitHub Copilot en mode Agent dans VS Code ;
+un pilote sur un projet qui n'est pas le nôtre.
 
 ## Mutations sur CrapSharp lui-même (après l'étape 12)
 
@@ -273,6 +273,11 @@ Corrections qui en découlent :
 | `--exclude <fragment>` (répétable) | écarte les fichiers dont le chemin contient le fragment ; combiné à `--filter` ; erreur (code 1) si plus rien ne reste ; le JSON marque le périmètre partiel et liste `exclude` |
 | Chemin relatif dans le tableau | `src/CrapSharp/App.cs:34` au lieu de `App.cs:34`, avec des `/` quel que soit le système |
 | Processus fils sans serveurs de build | `MSBUILDDISABLENODEREUSE=1`, `UseSharedCompilation=false`, `DOTNET_CLI_USE_MSBUILD_SERVER=0` fixés pour chaque processus lancé par l'outil (même cause que les 15 minutes de la CI) |
+
+**`--changed-since <réf>`** (ajouté ensuite, pour les PR déjà commitées) : fichiers `.cs` changés depuis l'ancêtre commun de `<réf>` et de `HEAD`
+(commités, modifiés ou non suivis). Erreur explicite si git ne connaît pas la référence (en CI : `fetch-depth: 0`). Exclusif avec `--changed`.
+Le JSON porte `scope.changedSince`. Score de mutation mesuré ensuite : **97,01 %** (487 tués, 10 survivants équivalents ou inatteignables). 7 tests unitaires et 2 de bout en bout sur un vrai dépôt git ; le test de bout en bout a d'abord
+échoué à cause d'une erreur de mon test (le second run écrasait le JSON du premier), pas de l'outil.
 
 Codex a signalé que le contrôle CRAP complet « est resté au démarrage des tests » dans sa session. Je n'ai pas pu le reproduire ; le
 dernier correctif ci-dessus en est la piste la plus probable, **non vérifiée dans son environnement**.
@@ -352,8 +357,7 @@ Dans l'ordre de priorité retenu (critères : risque de faux verdict, blocage d'
    couverte), noter scores, durées, faux positifs ; relancer l'outil avec `--exclude`. Puis le même essai dans Codex / ChatGPT.
 2. **Publier le paquet sur NuGet** (compte et clé d'API de l'utilisateur ; identifiant `CrapSharp` et version `0.1.0-preview.1` à confirmer),
    puis tester `dotnet tool install` et `dotnet tool restore` depuis un projet neuf.
-3. **Trancher les limites révélées par le pilote** : `--changed` ne couvre pas une PR déjà commitée (envisager `--changed-since <réf>`),
-   un rapport partiel écrase le JSON complet, jscpd ne voit pas les clones renommés, la découverte de fichiers ignore une partie de MSBuild.
+3. **Trancher les limites révélées par le pilote** : un rapport partiel écrase le JSON complet (`--changed-since` est fait), jscpd ne voit pas les clones renommés, la découverte de fichiers ignore une partie de MSBuild.
 4. **Adaptateur Spec Kit** (étape 13) puis **présentation publique finale** (étape 14), après le pilote.
 
 Voir aussi PLAN.md §6 et §7.
@@ -361,7 +365,7 @@ Voir aussi PLAN.md §6 et §7.
 ## Comment vérifier
 
 ```bash
-dotnet test                                                     # 201 réussis, 21 ignorés
+dotnet test                                                     # 208 réussis, 23 ignorés
 dotnet publish src/CrapSharp -o ./out
 dotnet ./out/CrapSharp.dll . --threshold 10                     # lance les tests avec couverture, doit sortir 0
 ```
@@ -369,7 +373,7 @@ dotnet ./out/CrapSharp.dll . --threshold 10                     # lance les test
 Tests de bout en bout (lents, réseau NuGet) :
 
 ```bash
-CRAPSHARP_E2E=1 dotnet test --filter Category=EndToEnd          # 27 cas attendus
+CRAPSHARP_E2E=1 dotnet test --filter Category=EndToEnd          # 29 cas attendus
 ```
 
 Environnement : Windows 11, SDK .NET 10.0.401, runtime 10.0.12.

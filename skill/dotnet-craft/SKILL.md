@@ -42,19 +42,23 @@ The goal is **strictly below 10** for every method: a score equal to 10 fails.
 dotnet crapsharp . --threshold 10
 ```
 
-Install it as a local tool. The package is not on NuGet yet, so pack it from this repository and install it from that folder:
+Use a local tool in the target repository. If `dotnet crapsharp --help` already works, use that installation. The package is not
+on NuGet yet; otherwise build it from a **CrapSharp checkout**, then install it in the target repository using that checkout's
+package directory (not `src/CrapSharp` in the target project). Replace the path placeholders before running these commands:
 
 ```bash
-dotnet pack src/CrapSharp -c Release -o ./nupkg
-dotnet new tool-manifest          # skip if the repository already has a manifest
-dotnet tool install CrapSharp --version 0.1.0-preview.1 --add-source ./nupkg
+dotnet pack <CrapSharp-checkout>/src/CrapSharp -c Release -o <CrapSharp-checkout>/nupkg
+dotnet new tool-manifest          # from the target repository; skip if it already has a manifest
+dotnet tool install CrapSharp --version 0.1.0-preview.1 --add-source <CrapSharp-checkout>/nupkg
 ```
 
 This sequence is exercised by an end-to-end test (clean manifest, `--help`, a strict gate on a fixture). With `dotnet tool install
---tool-path <folder>` the command is `<folder>/crapsharp`. Installation from NuGet, and on Linux or macOS, has not been verified.
+--tool-path <folder>` the command is `<folder>/crapsharp`. A separate machine or CI runner also needs the local package source
+for `dotnet tool restore --add-source <package-directory>` until publication. Installation from NuGet and on macOS has not been
+verified.
 
 By default the tool runs the tests with coverage itself (coverlet, or the Microsoft.Testing.Platform extensions), prints a table
-(worst score first) and writes `.metrics/crap.json`. Useful options: `--changed` (files modified according to git),
+(worst score first) and writes `.metrics/crap.json`. Useful options: `--changed` (files modified according to git), `--changed-since <ref>` (everything changed since a branch, committed or not: the scope of a pull request),
 `--filter <fragment>`, `--exclude <fragment>` (repeatable; leaves out code your tests cannot run, such as engine or UI code), `--use-existing-coverage`, `--coverage <report.xml>`, `--no-coverage` (complexity only, no threshold).
 
 | Code | Meaning | What to do |

@@ -473,4 +473,16 @@ public class AppTests
         Assert.Contains("(src/App/Calc.cs:4)", outcome.Output);
         Assert.Contains("(src/Other/Calc.cs:1)", outcome.Output);
     }
+
+    [Fact]
+    public void AFilterAndAnExcludeThatTogetherLeaveNothingAreNamedTogether()
+    {
+        using var ws = new TempWorkspace();
+        ws.CreateSolution();
+
+        var outcome = Run(new Options(ws.Root, [], NoCoverage: true, Filter: "Calc", exclude: ["App"]), new FakeProcessRunner());
+
+        Assert.Equal(1, outcome.ExitCode);
+        Assert.Contains("--filter and --exclude leave none of the 1 source file(s)", outcome.Error);
+    }
 }
