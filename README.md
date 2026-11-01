@@ -9,26 +9,35 @@ the same checks while changing code. It is a .NET counterpart of the discipline 
 
 ## Quick start
 
-Install the preview from [NuGet.org](https://www.nuget.org/packages/CrapSharp):
+**1. Install the tool** from [NuGet.org](https://www.nuget.org/packages/CrapSharp), from your project's root:
 
 ```bash
-dotnet tool install --global CrapSharp --version 0.1.0-preview.1
-crapsharp . --threshold 10
+dotnet new tool-manifest                                  # skip if the repository already has one
+dotnet tool install CrapSharp --version 0.1.0-preview.1   # then: dotnet crapsharp . --threshold 10
 ```
 
-For a repository-local installation, shared through a tool manifest (`dotnet crapsharp`), or to build from source, pack and
-install the tool from a CrapSharp checkout:
+The manifest (`.config/dotnet-tools.json`) can be committed: every colleague gets the same version with `dotnet tool restore`.
+For a personal installation instead, use `dotnet tool install --global CrapSharp --version 0.1.0-preview.1` (command: `crapsharp`).
+
+**2. Install the skill** (optional, for AI agents), in the project or for yourself:
 
 ```bash
-dotnet pack src/CrapSharp -c Release -o ./nupkg
-dotnet new tool-manifest          # skip if this repository already has one
-dotnet tool install CrapSharp --version 0.1.0-preview.1 --add-source ./nupkg
-dotnet crapsharp . --threshold 10
+npx skills add Telperien/CrapSharp --skill dotnet-craft        # this project (commit it to share it)
+npx skills add Telperien/CrapSharp --skill dotnet-craft -g     # all your projects (not tried yet)
 ```
 
-Run these commands from the CrapSharp checkout. In another repository, `dotnet new tool-manifest` then
-`dotnet tool install CrapSharp --version 0.1.0-preview.1` installs it from NuGet (no `--add-source`). The [skill installation guide](https://github.com/Telperien/CrapSharp/blob/main/docs/using-the-skill.md)
-gives the full cross-repository procedure.
+**3. Ask your agent** for a C# task, for example: *"Simplify `OrderService.Total` without changing its behavior."* The skill makes it
+write tests first, run the CRAP gate, and report what it could not verify. Naming it (`/dotnet-craft` in Claude Code,
+`$dotnet-craft` in Codex) is the reliable way; loading it on its own was seen but is not guaranteed.
+
+What else it needs, only for the checks that use it: a test project with a coverage collector (`coverlet.collector` or a
+Microsoft.Testing.Platform coverage extension), [Stryker.NET](https://stryker-mutator.io/) (`dotnet tool install dotnet-stryker`),
+and Node.js for `npx jscpd`. Without a shell that can run commands (a plain chat), the skill cannot run any check.
+`npx skills` is a community tool that also sends an install event (telemetry); the guide below has the manual copy.
+The [installation guide](https://github.com/Telperien/CrapSharp/blob/main/docs/using-the-skill.md) covers each host and what was tried.
+
+To build the tool from source instead: `dotnet pack src/CrapSharp -c Release -o ./nupkg`, then
+`dotnet tool install CrapSharp --version 0.1.0-preview.1 --add-source ./nupkg`.
 
 Here is the output for the repository's `basic` fixture (with coverage). The first method is fully covered but still reaches
 the threshold because its complexity is 10:

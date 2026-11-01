@@ -5,13 +5,27 @@ hosts below read that same file; copy the folder, do not edit it per host.
 The short shell examples below assume you run them from a CrapSharp checkout. For another repository, use the installation
 procedure below so the package and skill are copied from the correct source.
 
+## Quick install with `npx skills`
+
+```bash
+npx skills add Telperien/CrapSharp --list                                  # shows the skill without installing
+npx skills add Telperien/CrapSharp --skill dotnet-craft -a claude-code -a codex --copy -y
+```
+
+Checked from an empty directory: the tool found exactly one skill, `dotnet-craft`, and copied it to `.claude/skills/dotnet-craft/`
+and `.agents/skills/dotnet-craft/` with a `skills-lock.json`; the Claude Code copy was identical to `skill/dotnet-craft/SKILL.md`.
+Not tried: `-g` (personal installation), the other agents it lists, and an agent actually using a skill installed this way. It is
+a community tool: it also sends an install event (see its `--help`), and `-y` skips its confirmation prompts.
+A project installation can be committed with the code (with `.config/dotnet-tools.json`), so a colleague gets both with
+`dotnet tool restore`; a personal installation makes the skill available in all your projects.
+
 The skill only helps in an environment that can read the repository **and run commands**. It tells the agent to run
 `dotnet crapsharp`, `dotnet stryker` and `npx jscpd`; in a chat without a shell it can be read, but those checks cannot be run,
 and the agent must say so instead of claiming a result.
 
 ## Install in another .NET repository (Windows PowerShell)
 
-The tool comes from NuGet; the skill folder is copied from a CrapSharp checkout (the skill is not distributed as a package).
+This is the manual alternative to `npx skills`: the tool comes from NuGet; the skill folder is copied from a CrapSharp checkout.
 Replace the two paths below, then run these commands from the target repository's root. Skip `dotnet new tool-manifest` if the
 target already has a local tool manifest. If either tool is already in that manifest, skip its `dotnet tool install` command.
 
