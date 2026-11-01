@@ -224,7 +224,7 @@ skill/<nom>/SKILL.md           phase B
 | 9 | Packaging `dotnet tool` (`PackAsTool`, `ToolCommandName=crapsharp`), installation locale et commandes du skill vérifiées | **fait pour l'installation locale** (publication NuGet, licence et Linux/macOS non faits) |
 | 10 | Support des projets sur Microsoft.Testing.Platform (si l'étape 6 confirme le problème) | **fait, à relire** |
 | 11 | Contrôle de duplication (phase C) : choisir entre un outil existant (ex. jscpd) et une brique Roslyn, puis l'intégrer et le valider | **fait provisoirement** : jscpd adopté (option C), brique Roslyn si la limite gêne |
-| 12 | Essai de livraison (phase D) : installation reproductible, CLI/CI, skill dans plusieurs agents et pilote sur un projet .NET réel | **en cours** : CI Linux + Windows faite ; agents et pilote à faire |
+| 12 | Essai de livraison (phase D) : installation reproductible, CLI/CI, skill dans Claude Code, Codex et GitHub Copilot (VS Code), puis pilote sur un projet .NET réel | **en cours** : CI Linux + Windows faite ; agents et pilote à faire |
 | 13 | Adaptateur Spec Kit (phase E) prêt à installer : skill, règles de constitution, contrôles du workflow et exemple de projet | à terme |
 | 14 | Description finale (phase F) : expliquer le problème, les outils, l'usage et les limites ; publier les résumés utiles à la découverte | à faire en dernier |
 
@@ -368,10 +368,12 @@ commande exacte dans le skill. Vérifier le temps d'exécution et les faux posit
 - exécuter `crapsharp . --threshold 10`, Stryker.NET et le contrôle de duplication directement en terminal et dans une
   CI qui interprète leurs codes de sortie, sans agent IA ;
 - rédiger le cœur du skill avec le format ouvert `SKILL.md`, sans syntaxe propre à un agent. Documenter et essayer
-  son installation et son invocation dans Claude Code et dans Codex / ChatGPT sur une surface qui donne accès au
-  dépôt et à la CLI. Les emplacements et commandes d'invocation propres à chaque hôte restent dans de courts guides
-  séparés ([Claude Code](https://code.claude.com/docs/en/skills),
-  [documentation officielle OpenAI](https://learn.chatgpt.com/docs/build-skills)) ;
+  son installation et son invocation dans Claude Code, Codex / ChatGPT et GitHub Copilot en mode Agent dans VS Code,
+  sur des surfaces qui donnent accès au dépôt et à la CLI. Tester l'invocation explicite puis la sélection automatique
+  sur une tâche C# réelle, dans des sessions neuves. Les emplacements et commandes propres à chaque hôte restent dans
+  de courts guides séparés ([Claude Code](https://code.claude.com/docs/en/skills),
+  [documentation officielle OpenAI](https://learn.chatgpt.com/docs/build-skills),
+  [GitHub Copilot dans VS Code](https://code.visualstudio.com/docs/agent-customization/agent-skills)) ;
 - démontrer sur le pilote un résultat conforme et un échec attendu pour chaque contrôle, mesurer leur durée et
   documenter les limites (par exemple configuration MSBuild, frameworks ciblés, collecteur de couverture). Un skill
   chargé dans un environnement sans accès aux fichiers ou sans exécution de commandes ne peut pas lancer le gate ;
@@ -394,7 +396,7 @@ pour établir le tableau complet, puis évaluer le seuil 10 en CI sans bloquer l
   supplémentaire en CI, nombre de méthodes signalées, diagnostics jugés utiles et cas acceptables comme une simple
   table de correspondance. Fixer avec l'équipe le budget de temps et la politique de dérogation avant d'activer un gate
   bloquant.
-- **Skill, une fois prêt** : faire essayer des tâches C# réelles par au moins deux agents et un développeur, vérifier
+- **Skill, une fois prêt** : faire essayer des tâches C# réelles dans les trois hôtes visés et par un développeur, vérifier
   l'installation, l'appel effectif des contrôles, l'interprétation des codes de sortie et la qualité des tests ajoutés.
   Comparer l'effort et les résultats au processus habituel de l'équipe.
 
@@ -411,7 +413,8 @@ source du `SKILL.md` et fournir des procédures d'installation vérifiées, sans
 |---|---|---|
 | [NuGet.org](https://learn.microsoft.com/en-us/nuget/nuget-org/publish-a-package) | Publier le `dotnet tool` après choix du nom, de la licence et de la version ; renseigner description, README, dépôt et tags ; vérifier `dotnet tool install`, `restore` et l'exécution depuis une solution neuve. Le packaging local de l'étape 9 précède cette publication. | Essentiel pour la CLI publique |
 | [Claude Code](https://code.claude.com/docs/en/skills), [Codex / ChatGPT desktop](https://learn.chatgpt.com/docs/build-skills) | Fournir le skill au format ouvert et les instructions propres à chaque hôte (`.claude/skills/`, `.agents/skills/` ou installation personnelle) ; vérifier sa détection, son invocation et l'accès réel à la CLI sur un projet utilisateur. | Essentiel pour le skill portable |
-| [GitHub Copilot dans VS Code](https://code.visualstudio.com/docs/agent-customization/agent-skills) et autres agents compatibles | Essayer au moins un troisième hôte, avec son emplacement et sa commande d'installation documentés ; n'annoncer comme pris en charge que les hôtes validés. | Extension souhaitable |
+| [GitHub Copilot dans VS Code](https://code.visualstudio.com/docs/agent-customization/agent-skills) | Installer le même skill via `.github/skills/` (ou un autre emplacement pris en charge), vérifier sa détection, son invocation explicite et automatique en mode Agent, puis l'exécution réelle des contrôles sur le pilote. | Essentiel pour le skill portable |
+| [GitHub Copilot CLI](https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/add-skills) et autres surfaces Copilot | Vérifier séparément l'installation, l'invocation et l'accès à .NET / Node avant d'annoncer leur support. | Extension à valider selon les usages |
 | [skills.sh](https://www.skills.sh/docs/cli) | Vérifier l'installation depuis le dépôt avec `npx skills add` et la présence éventuelle dans son annuaire ; mesurer la découverte sans supposer qu'un référencement garantit une invocation. | Découverte optionnelle |
 | [Marketplace Claude Code](https://code.claude.com/docs/en/plugin-marketplaces), [répertoire de plugins ChatGPT/Codex](https://developers.openai.com/plugins/deploy/submission) | Si l'installation manuelle freine l'adoption, empaqueter le même skill dans les formats de plugin requis et tester leur publication propre à chaque plateforme ; une soumission publique OpenAI passe par une revue. | À décider après le pilote |
 
@@ -468,8 +471,8 @@ attendre de trancher tous les points avant de commencer l'étape 6.
 | 6, 12 | `--changed` / `--filter` et `.metrics/crap.json` | **Partiel** : métadonnées `scope.complete` ajoutées (§4.6) ; un rapport partiel écrase toujours le fichier. Reste à décider d'un second fichier, et à vérifier les consommateurs (skill). |
 | 10 | Support Microsoft.Testing.Platform | **Fait** (voir §6, étape 10). Tester `Microsoft.Testing.Extensions.CodeCoverage` (`--coverage --coverage-output-format cobertura`) et `coverlet.MTP` (`--coverlet --coverlet-output-format cobertura`) ; intégrer la voie retenue ou documenter la limite ([documentation .NET](https://learn.microsoft.com/en-us/dotnet/core/testing/microsoft-testing-platform-code-coverage)). |
 | 11 | Détecteur de duplication, seuil, exclusions et coût | Comparer un outil existant (ex. jscpd) à une brique Roslyn sur des exemples C# ; le rang `0,8` de dryer n'est pas directement transférable (§6). |
-| 12 | Hôtes testés pour le skill et niveau de support promis | Vérifier au minimum Claude Code et Codex / ChatGPT avec accès au dépôt et à la CLI ; publier une matrice « testé / documenté / non pris en charge ». Un skill seul ne donne pas accès à un shell. |
-| 12 ou plus tard | Distribution dans les catalogues et autres hôtes | Décider après le pilote si Copilot, skills.sh, un marketplace Claude et/ou un plugin public ChatGPT/Codex justifient leur maintenance ; vérifier chaque canal avant d'annoncer son support. L'usage CLI/CI et les hôtes locaux ne dépendent pas de ces options. |
+| 12 | Hôtes testés pour le skill et niveau de support promis | Vérifier Claude Code, Codex / ChatGPT avec accès au dépôt et à la CLI, et GitHub Copilot en mode Agent dans VS Code ; publier une matrice « testé / documenté / non pris en charge ». Vérifier séparément Copilot CLI ou les autres surfaces avant de les annoncer. Un skill seul ne donne pas accès à un shell. |
+| 12 ou plus tard | Distribution dans les catalogues et autres hôtes | Décider après le pilote si skills.sh, un marketplace Claude et/ou un plugin public ChatGPT/Codex justifient leur maintenance ; vérifier chaque canal avant d'annoncer son support. L'usage CLI/CI et les hôtes locaux ne dépendent pas de ces options. |
 | 13 | Forme de l'adaptateur Spec Kit | Choisir extension ou overlay installable selon les possibilités vérifiées sur le pilote ; une seule procédure publiée doit rendre le skill et les contrôles disponibles, sans recopier les instructions à la main. |
 | 14 | Langue et métadonnées publiques | Choisir français, anglais ou les deux ; aligner README, résumé GitHub, topics, NuGet et description du skill sur les fonctions livrées et les hôtes réellement testés. |
 

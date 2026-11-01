@@ -413,4 +413,64 @@ public class AppTests
 
         Assert.DoesNotContain("may be stale", outcome.Error);
     }
+
+    [Fact]
+    public void ExcludeDropsTheFilesWhosePathContainsAnyFragment()
+    {
+        using var ws = new TempWorkspace();
+        ws.CreateSolution();
+        ws.Write("src/App/Client/View.cs", "class View { void Draw() { } }");
+        ws.Write("src/App/Tools/Probe.cs", "class Probe { void Run() { } }");
+
+        var outcome = Run(new Options(ws.Root, [], NoCoverage: true, exclude: ["client", "Tools\\"]), new FakeProcessRunner());
+
+        Assert.Equal(0, outcome.ExitCode);
+        Assert.Contains("Calc.Sign", outcome.Output);
+        Assert.DoesNotContain("View.Draw", outcome.Output);
+        Assert.DoesNotContain("Probe.Run", outcome.Output);
+    }
+
+    [Fact]
+    public void ExcludingEverythingIsAnErrorLikeAFilterThatMatchesNothing()
+    {
+        using var ws = new TempWorkspace();
+        ws.CreateSolution();
+
+        var outcome = Run(new Options(ws.Root, [], NoCoverage: true, exclude: ["Calc"]), new FakeProcessRunner());
+
+        Assert.Equal(1, outcome.ExitCode);
+        Assert.Contains("--exclude leaves none of the 1 source file(s)", outcome.Error);
+        Assert.Empty(outcome.Runner.Calls);
+    }
+
+    [Fact]
+    public void ExcludeCombinesWithFilterAndMakesTheJsonScopePartial()
+    {
+        using var ws = new TempWorkspace();
+        var (source, _) = ws.CreateSolution();
+        ws.Write("src/App/Client/View.cs", "class View { void Draw() { } }");
+        var report = ws.Write("cov.xml", TempWorkspace.CoberturaXml(source, (6, 1), (7, 0)));
+
+        var outcome = Run(new Options(ws.Root, [report], Filter: "App", exclude: ["Client"]), new FakeProcessRunner());
+
+        Assert.Equal(0, outcome.ExitCode);
+        using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(ws.Path_(".metrics/crap.json")));
+        var scope = doc.RootElement.GetProperty("scope");
+        Assert.False(scope.GetProperty("complete").GetBoolean());
+        Assert.Equal(["Client"], scope.GetProperty("exclude").EnumerateArray().Select(e => e.GetString()));
+    }
+
+    [Fact]
+    public void TheTableLocatesEachMethodByItsPathRelativeToTheAnalyzedFolder()
+    {
+        using var ws = new TempWorkspace();
+        ws.CreateSolution();
+        ws.Write("src/Other/Other.csproj", "<Project Sdk=\"Microsoft.NET.Sdk\"></Project>");
+        ws.Write("src/Other/Calc.cs", "class Calc { void Twin() { } }");
+
+        var outcome = Run(new Options(ws.Root, [], NoCoverage: true), new FakeProcessRunner());
+
+        Assert.Contains("(src/App/Calc.cs:4)", outcome.Output);
+        Assert.Contains("(src/Other/Calc.cs:1)", outcome.Output);
+    }
 }

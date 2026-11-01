@@ -28,7 +28,7 @@ public static class JsonReportWriter
             JsonOptions);
 
     private static object ToScope(ReportContext c) =>
-        new { complete = c.Complete, changed = c.Changed, filter = c.Filter, files = c.FilesAnalyzed };
+        new { complete = c.Complete, changed = c.Changed, filter = c.Filter, exclude = c.Excluded, files = c.FilesAnalyzed };
 
     private static object ToCoverage(ReportContext c) =>
         new { source = c.CoverageSource.ToString(), reports = c.CoverageReports };

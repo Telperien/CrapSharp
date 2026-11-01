@@ -18,6 +18,11 @@ public sealed class SystemProcessRunner : IProcessRunner
             RedirectStandardError = true,
             UseShellExecute = false,
         };
+        // Servers that outlive a build (MSBuild nodes, the Roslyn compiler server) can keep the output of the process that
+        // started them open and stall its exit for minutes; none of them is worth keeping for a one-shot run.
+        info.Environment["MSBUILDDISABLENODEREUSE"] = "1";
+        info.Environment["UseSharedCompilation"] = "false";
+        info.Environment["DOTNET_CLI_USE_MSBUILD_SERVER"] = "0";
         foreach (var argument in arguments)
             info.ArgumentList.Add(argument);
         try

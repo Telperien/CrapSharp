@@ -275,4 +275,28 @@ public class ProcessRunnerTests
         Assert.Equal("", result.Output);
         Assert.NotEqual("", result.Error);
     }
+
+    [Fact]
+    public void ARootTurnsTheFileNameIntoARelativePathWithForwardSlashes()
+    {
+        var file = Path.Combine(Path.GetFullPath("root"), "sub", "Foo.cs");
+        var method = new MethodComplexity("A", file, 3, 4, 2);
+
+        var table = ReportFormatter.Table([new MethodReport(method, null, null)], Path.GetFullPath("root"));
+
+        Assert.Contains("A  (sub/Foo.cs:3)", table);
+    }
+
+    [Fact]
+    public void ChildProcessesDoNotLeaveBuildServersBehind()
+    {
+        // Servers that outlive a build can keep the output of the process that started them open and stall its exit.
+        var (file, args) = OperatingSystem.IsWindows()
+            ? ("cmd", new[] { "/c", "echo %MSBUILDDISABLENODEREUSE%,%UseSharedCompilation%,%DOTNET_CLI_USE_MSBUILD_SERVER%" })
+            : ("sh", new[] { "-c", "echo $MSBUILDDISABLENODEREUSE,$UseSharedCompilation,$DOTNET_CLI_USE_MSBUILD_SERVER" });
+
+        var result = new SystemProcessRunner().Run(file, args, Path.GetTempPath());
+
+        Assert.Equal("1,false,0", result.Output.Trim());
+    }
 }

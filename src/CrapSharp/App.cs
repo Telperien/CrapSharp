@@ -58,7 +58,7 @@ public sealed class App(IProcessRunner processes, TextWriter output, TextWriter 
     // Nothing to score before any test runs: an empty pass would look like a verified one, unless the selection was narrowed.
     private int NoMembers(Options options, int fileCount)
     {
-        if (options.Filter is null && !options.Changed)
+        if (options.Filter is null && !options.Changed && options.Exclude.Count == 0)
             return Fail($"no measurable member found in the {fileCount} analyzed file(s)");
         error.WriteLine("no measurable member in the selected file(s)");
         return ExitCodes.Ok;
@@ -70,7 +70,7 @@ public sealed class App(IProcessRunner processes, TextWriter output, TextWriter 
         if (coverage.Map is { } map && !CheckCoverage(methods, workspace, map))
             return ExitCodes.Error;
         WarnIfStale(options, files, coverage.Reports);
-        var context = new ReportContext(options.Changed, options.Filter, options.Mode, coverage.Reports, files.Count);
+        var context = new ReportContext(options.Changed, options.Filter, options.Mode, coverage.Reports, files.Count, options.Exclude);
         var thresholdExitCode = Report(options, workspace, methods, coverage.Map, context);
         return coverage.RunFailed ? TestsFailed() : thresholdExitCode;
     }
@@ -80,11 +80,9 @@ public sealed class App(IProcessRunner processes, TextWriter output, TextWriter 
     {
         if (workspace.SourceFiles.Count == 0)
             return ([], Fail($"no production C# source file found under {workspace.Root}"));
-        var files = options.Filter is null
-            ? workspace.SourceFiles
-            : workspace.SourceFiles.Where(file => MatchesFilter(file, options.Filter)).ToList();
+        var files = workspace.SourceFiles.Where(file => IsSelected(file, options)).ToList();
         if (files.Count == 0)
-            return ([], Fail($"--filter '{options.Filter}' matches none of the {workspace.SourceFiles.Count} source file(s)"));
+            return ([], Fail(NothingSelected(options, workspace.SourceFiles.Count)));
         return options.Changed ? KeepChanged(workspace, files) : (files, null);
     }
 
@@ -106,13 +104,24 @@ public sealed class App(IProcessRunner processes, TextWriter output, TextWriter 
         }
     }
 
+    private static bool IsSelected(string file, Options options) =>
+        (options.Filter is null || MatchesFilter(file, options.Filter))
+        && !options.Exclude.Any(fragment => MatchesFilter(file, fragment));
+
+    private static string NothingSelected(Options options, int total) => (options.Filter, options.Exclude.Count) switch
+    {
+        (not null, 0) => $"--filter '{options.Filter}' matches none of the {total} source file(s)",
+        (null, _) => $"--exclude leaves none of the {total} source file(s)",
+        _ => $"--filter and --exclude leave none of the {total} source file(s)",
+    };
+
     private static bool MatchesFilter(string file, string fragment) =>
         file.Replace('\\', '/').Contains(fragment.Replace('\\', '/'), StringComparison.OrdinalIgnoreCase);
 
     private int Report(Options options, Workspace workspace, IReadOnlyList<MethodComplexity> methods, CoverageMap? coverage, ReportContext context)
     {
         var reports = MethodReport.Build(methods, coverage);
-        output.Write(ReportFormatter.Table(reports));
+        output.Write(ReportFormatter.Table(reports, workspace.Root));
         if (coverage is not null)
         {
             JsonReportWriter.Write(reports, Path.Combine(workspace.Root, ".metrics", "crap.json"), context);

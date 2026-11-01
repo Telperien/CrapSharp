@@ -154,4 +154,12 @@ public class OptionsAndDiscoveryTests : IDisposable
             ["C.Finalize", "C.operator +(C, C)", "C.operator int(C)", "C.get_Item", "C.add_E", "C.remove_E"],
             names);
     }
+
+    [Fact]
+    public void ExcludeCanBeGivenSeveralTimesAndNeedsAValue()
+    {
+        Assert.Equal(["Client", "V2"], Options.Parse(["--exclude", "Client", "--exclude", "V2"]).Exclude);
+        Assert.Empty(Options.Parse([]).Exclude);
+        Assert.Equal("--exclude expects a value", Assert.Throws<OptionsException>(() => Options.Parse(["--exclude", "--changed"])).Message);
+    }
 }

@@ -29,8 +29,13 @@ public sealed record Options(
     bool Changed = false,
     string? CoverageCommand = null,
     string? Filter = null,
-    bool Help = false)
+    bool Help = false,
+    IReadOnlyList<string>? exclude = null)
 {
+    /// <summary>--exclude fragments: files whose path contains any of them are left out.</summary>
+    public IReadOnlyList<string> Exclude { get; } = exclude ?? [];
+
+
     public const string Usage = """
         Usage: crapsharp [path] [options]
 
@@ -47,7 +52,9 @@ public sealed record Options(
           --changed                   only the .cs files git sees as modified, added or untracked
                                       (none changed: exit 0, nothing scored)
           --filter <fragment>         only the files whose path contains the fragment
-                                      (no match: exit 1). With either, the JSON says its scope is partial.
+                                      (no match: exit 1)
+          --exclude <fragment>        leave out the files whose path contains the fragment (repeatable)
+                                      With any of these, the JSON says its scope is partial.
 
           --threshold <N>             exit code 2 unless every method scores below N (N finite, above 0)
           -h, --help                  show this help
@@ -65,7 +72,8 @@ public sealed record Options(
     private static readonly string[] CoverageSourceOptions =
         ["--no-coverage", "--coverage", "--coverage-command", "--use-existing-coverage"];
 
-    private static readonly HashSet<string> ValueOptions = ["--coverage", "--threshold", "--coverage-command", "--filter"];
+    private static readonly HashSet<string> ValueOptions =
+        ["--coverage", "--threshold", "--coverage-command", "--filter", "--exclude"];
 
     public CoverageMode Mode
     {
@@ -103,7 +111,8 @@ public sealed record Options(
             flags.Contains("--changed"),
             LastValue(values, "--coverage-command"),
             LastValue(values, "--filter"),
-            flags.Contains("--help") || flags.Contains("-h"));
+            flags.Contains("--help") || flags.Contains("-h"),
+            values.GetValueOrDefault("--exclude"));
     }
 
     private static void Tokenize(

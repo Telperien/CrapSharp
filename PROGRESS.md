@@ -2,8 +2,8 @@
 
 > Fichier destiné à la **review par une autre IA ou un humain**. Mis à jour à chaque étape.
 > Objectif, conventions de mesure et feuille de route : [PLAN.md](PLAN.md). Reviews : [REVIEWS.md](REVIEWS.md).
-> Dernière mise à jour : 2026-11-01 — étapes 6 et 7 réalisées, **en attente de relecture** ; l'étape 7 n'est pas commitée.
-> Un commit initial (`3d8d55f`) existe ; les travaux suivants restent dans l'arbre de travail.
+> Dernière mise à jour : 2026-11-01 — étapes 1 à 12 faites (la 12 en partie), licence MIT, CI Linux et Windows verte ; premier essai sur un
+> projet réel (Tower Attack, un jeu Godot) : voir « Retours du premier projet réel ». Les commits sont sur `main`.
 
 ## Résumé de l'état
 
@@ -258,6 +258,31 @@ dans `ProjectDiscovery`, format `"0"` de `ReportFormatter` pour un nombre déjà
 est identique sur Windows et ne se tue que sous Linux ; `sh -c` n'est exécuté que sous Linux, où la CI le teste).
 Le score ne mesure que `src/CrapSharp` ; les tests de bout en bout ne sont pas joués par Stryker (ignorés sans `CRAPSHARP_E2E`).
 
+## Retours du premier projet réel (Tower Attack)
+
+Premier essai de l'outil sur un projet qui n'est pas CrapSharp : un jeu Godot (client Godot, serveur, simulation, présentation, outils).
+Résultat de départ : 479 méthodes à 10 ou plus (code 2). Les avertissements nomment correctement les projets absents de la couverture.
+Constats : la plupart des pires scores viennent du code Godot (nœuds, scènes), que le projet de tests n'exécute pas ; les vrais
+candidats sont des méthodes de `Simulation` à 100 % de couverture mais de CC élevée (CC 72, 39, 36…) ; deux copies du client
+(`Client` et `V2/Client`) produisent des méthodes en double.
+
+Corrections qui en découlent :
+
+| Changement | Détail |
+|---|---|
+| `--exclude <fragment>` (répétable) | écarte les fichiers dont le chemin contient le fragment ; combiné à `--filter` ; erreur (code 1) si plus rien ne reste ; le JSON marque le périmètre partiel et liste `exclude` |
+| Chemin relatif dans le tableau | `src/CrapSharp/App.cs:34` au lieu de `App.cs:34`, avec des `/` quel que soit le système |
+| Processus fils sans serveurs de build | `MSBUILDDISABLENODEREUSE=1`, `UseSharedCompilation=false`, `DOTNET_CLI_USE_MSBUILD_SERVER=0` fixés pour chaque processus lancé par l'outil (même cause que les 15 minutes de la CI) |
+
+Codex a signalé que le contrôle CRAP complet « est resté au démarrage des tests » dans sa session. Je n'ai pas pu le reproduire ; le
+dernier correctif ci-dessus en est la piste la plus probable, **non vérifiée dans son environnement**.
+
+Résultats : 201 tests rapides (+ 27 cas de bout en bout), auto-contrôle de l'outil 0 sans avertissement, score de mutation 96,81 %
+(455 tués, 9 survivants équivalents ou inatteignables comme avant).
+
+**Non vérifié** : la nouvelle sortie sur Tower Attack lui-même (les commandes sont dans la réponse à l'utilisateur) ; l'essai du skill dans
+Claude Code et Codex.
+
 ## Usage
 
 ```bash
@@ -274,6 +299,7 @@ crapsharp --help
 | `--no-coverage` | complexité seule (CRAP et couverture affichés `-`) |
 | `--changed` | ne garde que les `.cs` modifiés / ajoutés / non suivis selon `git status` |
 | `--filter <fragment>` | ne garde que les fichiers dont le chemin contient le fragment (`/` ou `\`) |
+| `--exclude <fragment>` | écarte les fichiers dont le chemin contient le fragment (répétable) |
 | `--threshold <N>` | code 2 sauf si **toutes** les méthodes sont strictement sous N |
 | `-h`, `--help` | aide |
 
@@ -320,12 +346,22 @@ Vérifications plus anciennes (étape 4, avant les changements de l'étape 5) : 
 
 ## Reste à faire
 
-Voir la feuille de route (PLAN.md §6). Étapes 6, 7, 8 (rédigée) et 10 faites, à relire ; étape 9 faite en local ; prochaines étapes : **11** (duplication) puis **12** (essai de livraison dans plusieurs agents).
+Dans l'ordre de priorité retenu (critères : risque de faux verdict, blocage d'un vrai usage, coût) :
+
+1. **Finir le pilote sur Tower Attack** : essayer le skill dans Claude Code sur une petite tâche de `Simulation` (une méthode à CC 10 déjà
+   couverte), noter scores, durées, faux positifs ; relancer l'outil avec `--exclude`. Puis le même essai dans Codex / ChatGPT.
+2. **Publier le paquet sur NuGet** (compte et clé d'API de l'utilisateur ; identifiant `CrapSharp` et version `0.1.0-preview.1` à confirmer),
+   puis tester `dotnet tool install` et `dotnet tool restore` depuis un projet neuf.
+3. **Trancher les limites révélées par le pilote** : `--changed` ne couvre pas une PR déjà commitée (envisager `--changed-since <réf>`),
+   un rapport partiel écrase le JSON complet, jscpd ne voit pas les clones renommés, la découverte de fichiers ignore une partie de MSBuild.
+4. **Adaptateur Spec Kit** (étape 13) puis **présentation publique finale** (étape 14), après le pilote.
+
+Voir aussi PLAN.md §6 et §7.
 
 ## Comment vérifier
 
 ```bash
-dotnet test                                                     # 194 réussis, 21 ignorés
+dotnet test                                                     # 201 réussis, 21 ignorés
 dotnet publish src/CrapSharp -o ./out
 dotnet ./out/CrapSharp.dll . --threshold 10                     # lance les tests avec couverture, doit sortir 0
 ```
@@ -333,7 +369,7 @@ dotnet ./out/CrapSharp.dll . --threshold 10                     # lance les test
 Tests de bout en bout (lents, réseau NuGet) :
 
 ```bash
-CRAPSHARP_E2E=1 dotnet test --filter Category=EndToEnd          # 26 cas attendus
+CRAPSHARP_E2E=1 dotnet test --filter Category=EndToEnd          # 27 cas attendus
 ```
 
 Environnement : Windows 11, SDK .NET 10.0.401, runtime 10.0.12.

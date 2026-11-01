@@ -55,7 +55,7 @@ This sequence is exercised by an end-to-end test (clean manifest, `--help`, a st
 
 By default the tool runs the tests with coverage itself (coverlet, or the Microsoft.Testing.Platform extensions), prints a table
 (worst score first) and writes `.metrics/crap.json`. Useful options: `--changed` (files modified according to git),
-`--filter <fragment>`, `--use-existing-coverage`, `--coverage <report.xml>`, `--no-coverage` (complexity only, no threshold).
+`--filter <fragment>`, `--exclude <fragment>` (repeatable; leaves out code your tests cannot run, such as engine or UI code), `--use-existing-coverage`, `--coverage <report.xml>`, `--no-coverage` (complexity only, no threshold).
 
 | Code | Meaning | What to do |
 |---|---|---|

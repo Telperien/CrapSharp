@@ -39,6 +39,7 @@ The tool runs the tests with coverage, prints a table (worst score first) and wr
 | `--threshold <N>` | exit code 2 unless every method is strictly below N (N finite, above 0) |
 | `--changed` | only the `.cs` files modified according to git |
 | `--filter <fragment>` | only the files whose path contains the fragment |
+| `--exclude <fragment>` | leave out the files whose path contains the fragment (repeatable), for example engine code your tests cannot run |
 | `--coverage <report.xml>` | use this Cobertura report (repeatable), run nothing |
 | `--use-existing-coverage` | reuse the reports of an earlier run |
 | `--coverage-command "<cmd>"` | run this command and read the `*cobertura*.xml` reports it writes |
@@ -70,7 +71,7 @@ It finds exact clones only, not renamed ones.
 - Coverage is by **lines** only; matching by line ranges is an approximation (two members on the same line share the same result).
 - Syntactic analysis without MSBuild: no `DefineConstants`, linked files or `Directory.Build.props`.
 - Complexity follows CrapSharp's convention; it differs from CA1502 (Visual Studio) on five constructs (PLAN.md section 4.2).
-- Tried on Windows only, with xUnit and MSTest; Linux, macOS, NUnit, xunit.v3 and TUnit are not verified.
+- Tried on Windows and Linux (CI), with xUnit and MSTest, and once on a real Godot game; macOS, NUnit, xunit.v3 and TUnit are not verified.
 
 ## Development
 
