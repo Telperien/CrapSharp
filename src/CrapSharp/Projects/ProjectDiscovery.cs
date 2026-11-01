@@ -14,6 +14,7 @@ public static class ProjectDiscovery
         "Microsoft.NET.Test.Sdk",
         "<IsTestProject>true",
         "Include=\"xunit.v3",
+        "Include=\"TUnit",
         "Include=\"NUnit\"",
         "Include=\"MSTest",
     ];

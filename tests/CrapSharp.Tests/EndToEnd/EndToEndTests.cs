@@ -164,6 +164,8 @@ public class EndToEndTests
     [EndToEndTheory]
     [InlineData("mtp-codecoverage")]
     [InlineData("mtp-coverlet")]
+    [InlineData("xunit-v3")]
+    [InlineData("tunit")]
     public void AMicrosoftTestingPlatformProjectIsScoredThroughItsCoverageExtension(string fixtureName)
     {
         using var fixture = FixtureCopy.Of(fixtureName);
@@ -174,6 +176,32 @@ public class EndToEndTests
         Assert.Equal(0, run.ExitCode);
         AssertEntry(run.EntryOf("Rules.Sign(int)"), 2, 100, 2);
         Assert.Single(run.CoverageReports());
+    }
+
+    [EndToEndFact]
+    public void ANUnitProjectIsScoredThroughCoverletLikeAnXunitOne()
+    {
+        using var fixture = FixtureCopy.Of("nunit");
+
+        var run = fixture.Run("--threshold", "10");
+
+        Assert.Equal(0, run.ExitCode);
+        AssertEntry(run.EntryOf("Rules.Sign(int)"), 2, 100, 2);
+        Assert.Single(run.CoverageReports());
+    }
+
+    [EndToEndFact]
+    public void AnXunitV3ProjectThatKeepsItsOwnRunnerIsNamedNotScoredAtZero()
+    {
+        using var fixture = FixtureCopy.Of("xunit-v3-native");
+
+        var run = fixture.Run("--threshold", "10");
+
+        // xunit.v3 without UseMicrosoftTestingPlatformRunner rejects --coverage, and VSTest is refused on the .NET 10 SDK.
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("<UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>", run.Error);
+        Assert.Empty(run.Output);
+        Assert.False(run.HasJson);
     }
 
     [EndToEndFact]

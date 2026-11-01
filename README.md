@@ -123,7 +123,7 @@ It finds exact clones only, not renamed ones.
 - Coverage is by **lines** only; matching by line ranges is an approximation (two members on the same line share the same result).
 - Syntactic analysis without MSBuild: no `DefineConstants`, linked files or `Directory.Build.props`.
 - Complexity follows CrapSharp's convention; it differs from CA1502 (Visual Studio) on five constructs ([docs/conventions.md](https://github.com/Telperien/CrapSharp/blob/main/docs/conventions.md)).
-- Tried on Windows and Linux (CI), with xUnit and MSTest, and once on a real Godot game; macOS, NUnit, xunit.v3 and TUnit are not verified.
+- Tried on Windows and Linux (CI), with xUnit and MSTest, and once on a real Godot game; on `main` (not in 0.1.0-preview.1), NUnit, xunit.v3 and TUnit were tried on a one-method fixture each (Windows only); macOS is not verified. xunit.v3 needs `<UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>` and TUnit/xunit.v3 run through `dotnet run`, not `dotnet test`.
 
 ## Development
 

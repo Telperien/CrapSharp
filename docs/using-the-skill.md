@@ -128,7 +128,7 @@ The Windows example above builds and installs both local .NET tools. On another 
 | jscpd duplication gate on `src` | tested (local, CI) | tested (CI) | not tested |
 | Stryker.NET on a test project (clean clone, pinned manifest) | tested (local) | not tested | not tested |
 | Test projects: xUnit and MSTest, VSTest and Microsoft.Testing.Platform | tested | tested (CI) | not tested |
-| NUnit, xunit.v3, TUnit | not tested | not tested | not tested |
+| NUnit (VSTest), xunit.v3 and TUnit (Microsoft.Testing.Platform), one fixture each | tested (local) | not tested | not tested |
 
 | Host | Status |
 |---|---|

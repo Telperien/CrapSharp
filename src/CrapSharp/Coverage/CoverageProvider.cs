@@ -66,7 +66,10 @@ public sealed class CoverageProvider(IProcessRunner processes, TextWriter error)
         if (runner == TestRunner.MtpWithoutCoverage)
         {
             error.WriteLine($"warning: {Path.GetFileName(project)} uses Microsoft.Testing.Platform but references neither "
-                + "Microsoft.Testing.Extensions.CodeCoverage nor coverlet.MTP, so it cannot write a Cobertura report; not run");
+                + "Microsoft.Testing.Extensions.CodeCoverage nor coverlet.MTP, so it cannot write a Cobertura report; not run"
+                + (TestRunners.UsesXunitV3Runner(File.ReadAllText(project))
+                    ? " (an xunit.v3 project also needs <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>)"
+                    : ""));
             return false;
         }
         error.WriteLine($"Running tests with coverage: {Path.GetFileName(project)}");

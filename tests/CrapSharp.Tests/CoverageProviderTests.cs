@@ -282,6 +282,25 @@ public class CoverageProviderTests
     }
 
     [Fact]
+    public void AnXunitV3ProjectThatKeepsItsOwnRunnerIsToldHowToOptIn()
+    {
+        using var ws = new TempWorkspace();
+        ws.CreateSolution();
+        File.Delete(ws.Path_("tests/App.Tests/App.Tests.csproj"));
+        ws.Write("tests/App.Tests/App.Tests.csproj",
+            "<Project><PropertyGroup><OutputType>Exe</OutputType></PropertyGroup><ItemGroup>"
+            + "<PackageReference Include=\"xunit.v3\" Version=\"4.0.2\" />"
+            + "<PackageReference Include=\"Microsoft.Testing.Extensions.CodeCoverage\" Version=\"18.1.0\" /></ItemGroup></Project>");
+        var runner = new FakeProcessRunner();
+
+        var (result, errors) = Obtain(new Options(ws.Root, []), ProjectDiscovery.Discover(ws.Root), runner);
+
+        Assert.False(result.Succeeded);
+        Assert.Empty(runner.Calls);
+        Assert.Contains("<UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>", errors);
+    }
+
+    [Fact]
     public void UseExistingWithoutAnyReportIsAnError()
     {
         using var ws = new TempWorkspace();

@@ -3,6 +3,13 @@
 All notable changes to CrapSharp. The format follows [Keep a Changelog](https://keepachangelog.com/); versions follow
 [Semantic Versioning](https://semver.org/), and `0.x` versions may change their options without notice.
 
+## Unreleased
+
+### Added
+- NUnit, xunit.v3 and TUnit projects are recognized and scored (one-method fixture each, Windows only). TUnit was not detected as a
+  test project in 0.1.0-preview.1. An xunit.v3 project must set `UseMicrosoftTestingPlatformRunner`; otherwise the tool says so
+  instead of failing on an unknown `--coverage` option, and scores nothing.
+
 ## 0.1.0-preview.1
 
 First public preview.
