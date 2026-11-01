@@ -1,0 +1,89 @@
+name: Publish NuGet
+
+# Publishing a GitHub Release is the deliberate release step. A pushed tag alone
+# does not publish a package.
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      MSBUILDDISABLENODEREUSE: "1"
+      UseSharedCompilation: "false"
+      DOTNET_CLI_USE_MSBUILD_SERVER: "0"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            9.0.x
+            10.0.x
+
+      - name: Check tag and package version
+        shell: bash
+        env:
+          RELEASE_PRERELEASE: ${{ github.event.release.prerelease }}
+        run: |
+          set -euo pipefail
+          version="$(dotnet msbuild src/CrapSharp/CrapSharp.csproj -getProperty:Version -nologo)"
+          if [[ "$GITHUB_REF_NAME" != "v$version" ]]; then
+            echo "Release tag $GITHUB_REF_NAME does not match package version $version" >&2
+            exit 1
+          fi
+          if [[ "$version" == *-* && "$RELEASE_PRERELEASE" != "true" ]]; then
+            echo "Mark a prerelease package as a GitHub prerelease" >&2
+            exit 1
+          fi
+          if [[ "$version" != *-* && "$RELEASE_PRERELEASE" == "true" ]]; then
+            echo "A stable package needs a stable GitHub Release" >&2
+            exit 1
+          fi
+          echo "PACKAGE_VERSION=$version" >> "$GITHUB_ENV"
+
+      - name: Fast tests
+        run: dotnet test --configuration Release
+
+      - name: End-to-end tests
+        run: dotnet test --configuration Release --filter Category=EndToEnd
+        env:
+          CRAPSHARP_E2E: "1"
+
+      - name: Pack
+        run: dotnet pack src/CrapSharp/CrapSharp.csproj --configuration Release --output artifacts/nuget -p:ContinuousIntegrationBuild=true
+
+      - name: Install packaged tool in an empty directory
+        shell: bash
+        run: |
+          set -euo pipefail
+          install_dir="$(mktemp -d)"
+          dotnet tool install CrapSharp --tool-path "$install_dir" --version "$PACKAGE_VERSION" --add-source "$PWD/artifacts/nuget"
+          "$install_dir/crapsharp" --help
+
+      - name: Check NuGet account setting
+        env:
+          NUGET_USER: ${{ vars.NUGET_USER }}
+        run: |
+          if [ -z "$NUGET_USER" ]; then
+            echo "Set the repository variable NUGET_USER to the nuget.org profile name" >&2
+            exit 1
+          fi
+
+      - name: Get temporary NuGet publishing key
+        id: login
+        uses: NuGet/login@v1
+        with:
+          user: ${{ vars.NUGET_USER }}
+
+      - name: Publish package
+        env:
+          NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
+        run: dotnet nuget push "artifacts/nuget/CrapSharp.$PACKAGE_VERSION.nupkg" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json

@@ -1,14 +1,52 @@
 # CrapSharp
 
-A .NET counterpart of [unclebob/ub-mode](https://github.com/unclebob/ub-mode):
+CrapSharp finds C# methods that combine high complexity with weak test coverage, and fails a build when their CRAP score reaches
+your threshold. Use the .NET tool directly in a terminal or CI, or pair it with the `dotnet-craft` skill to make an AI agent run
+the same checks while changing code. It is a .NET counterpart of the discipline in [unclebob/ub-mode](https://github.com/unclebob/ub-mode).
+
+[![CI](https://github.com/Telperien/CrapSharp/actions/workflows/ci.yml/badge.svg)](https://github.com/Telperien/CrapSharp/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+## Quick start
+
+The first NuGet release is pending. Once it is available, install the version shown on
+[NuGet.org](https://www.nuget.org/packages/CrapSharp):
+
+```bash
+dotnet tool install --global CrapSharp --version 0.1.0-preview.1
+crapsharp . --threshold 10
+```
+
+Until then, pack and install the tool locally from a CrapSharp checkout:
+
+```bash
+dotnet pack src/CrapSharp -c Release -o ./nupkg
+dotnet new tool-manifest          # skip if this repository already has one
+dotnet tool install CrapSharp --version 0.1.0-preview.1 --add-source ./nupkg
+dotnet crapsharp . --threshold 10
+```
+
+Run these commands from the CrapSharp checkout. To install it in another repository, give `--add-source` the absolute path to
+the package directory. The [skill installation guide](docs/using-the-skill.md) gives the full cross-repository procedure.
+
+Here is the output for the repository's `basic` fixture (with coverage). The first method is fully covered but still reaches
+the threshold because its complexity is 10:
+
+```text
+    CRAP   CC    Cov  Method
+   10.00   10   100%  App.Decisions.Ten(int)  (src/App/Decisions.cs:6)
+    6.00    2     0%  App.Decisions.Untouched(int)  (src/App/Decisions.cs:22)
+CRAP threshold not met: 1 method(s) score 10 or more; every method must score below 10
+```
+
+The command exits with code 2 in this example. It also writes `.metrics/crap.json` for scripts and agents.
+
+## What is included
 
 - **`crapsharp`**, a command-line tool that computes the **CRAP** score of every C# method and can act as a gate
   ("every method strictly below N") in a terminal or in CI;
 - **`skill/dotnet-craft`**, a skill (`SKILL.md`) describing the working discipline (strict TDD, refactoring, deterministic checks)
   and calling `crapsharp` and Stryker.NET.
-
-> Status: the tool is usable from source and installs as a local `dotnet tool` from a local package. Publication on NuGet is not done yet
-> (see [PLAN.md](PLAN.md), written in French).
 
 ## The score
 
@@ -22,14 +60,7 @@ to be simplified. The exact conventions (what counts for complexity, how coverag
 Requirements: the .NET 10 SDK. Test projects must produce a Cobertura report: `coverlet.collector` (VSTest), or
 `Microsoft.Testing.Extensions.CodeCoverage` / `coverlet.MTP` (Microsoft.Testing.Platform).
 
-```bash
-dotnet pack src/CrapSharp -c Release -o ./nupkg
-dotnet new tool-manifest          # skip if the repository already has a manifest
-dotnet tool install CrapSharp --version 0.1.0-preview.1 --add-source ./nupkg
-dotnet crapsharp . --threshold 10
-```
-
-The package is not published on NuGet yet. `dotnet publish src/CrapSharp -o ./out` followed by `dotnet ./out/CrapSharp.dll …` also works.
+`dotnet publish src/CrapSharp -o ./out` followed by `dotnet ./out/CrapSharp.dll …` also works without installing a tool.
 
 The tool runs the tests with coverage, prints a table (worst score first) and writes `.metrics/crap.json`.
 
@@ -85,6 +116,7 @@ dotnet publish src/CrapSharp -c Release -o ./out && dotnet ./out/CrapSharp.dll .
 
 Tracking: [PLAN.md](PLAN.md) (specification, roadmap, decisions), [PROGRESS.md](PROGRESS.md) (state),
 [REVIEWS.md](REVIEWS.md) (reviews). These three files are in French.
+The [release guide](docs/releasing.md) covers package validation and the NuGet publishing setup.
 
 ## License
 

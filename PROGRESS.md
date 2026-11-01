@@ -14,14 +14,14 @@
 | 6 | Fixtures réelles et tests de bout en bout | **fait, à relire** (manques listés plus bas) |
 | 7 | Oracle de complexité indépendant et comparaison avec ReportGenerator | **fait, à relire** |
 | 8 | Skill complet (discipline ub-mode, `crapsharp`, Stryker.NET) + README | **rédigé, à relire** |
-| 9 | Packaging `dotnet tool` | **fait en local**, à relire (pas de publication NuGet) ; licence MIT ajoutée |
+| 9 | Packaging `dotnet tool` | **fait en local** ; métadonnées, README et workflow NuGet préparés, publication non faite |
 | 10 | Microsoft.Testing.Platform | **fait, à relire** |
 | 11 | Duplication | **jscpd adopté** (provisoire), à relire |
 | 12 | Livraison autonome et essais du skill dans Claude Code, Codex et GitHub Copilot (VS Code) | **en cours** : CI faite ; trois hôtes et pilote externe à essayer |
 | 13 | Adaptateur Spec Kit | à terme |
 | 14 | Description publique et découvrabilité | à faire en dernier |
 
-`dotnet test` : **162 tests rapides réussis, 20 ignorés** (net10.0, vérification rapportée). Les tests de bout en bout
+`dotnet test --configuration Release` : **208 tests rapides réussis, 23 ignorés** (net10.0, vérifié le 2026-11-01). Les tests de bout en bout
 ont été lancés séparément sur le projet `tests/CrapSharp.Tests/CrapSharp.Tests.csproj` avec `CRAPSHARP_E2E=1` :
 **26 réussis, 0 échec, 0 ignoré** (49 s, vérifié le 2026-11-01).
 L'outil publié, lancé sur le dépôt (`crapsharp . --threshold 10`), exécute lui-même les tests avec couverture, se
@@ -193,6 +193,20 @@ publication NuGet ou GitHub publique) ; la publication éventuelle sur NuGet.
 **Non vérifié** : installation depuis NuGet (le paquet n'y est pas) ; Linux et macOS ; l'installation globale (`-g`) n'a pas été essayée,
 seulement `--tool-path` et le manifeste local.
 
+### Préparation de la publication NuGet (2026-11-01)
+
+- Métadonnées de découverte ajoutées au `.csproj` : titre, description, tags, URL du projet et dépôt, notes de preview.
+  Le SDK .NET 10 inclut SourceLink ; le `.nupkg` contient aussi le README et la licence MIT déclarée.
+- README réorganisé avec une installation NuGet clairement annoncée comme future et une sortie de la fixture `basic` ;
+  `docs/releasing.md` décrit la politique Trusted Publishing, la Release GitHub et la vérification après publication.
+- `.github/workflows/publish-nuget.yml` publie uniquement à la publication explicite d'une GitHub Release : version du tag
+  contrôlée, tests, pack, installation depuis le paquet local, puis clé temporaire OIDC et push NuGet.
+- Vérifié localement : `dotnet pack` crée `CrapSharp.0.1.0-preview.1.nupkg` avec les métadonnées attendues ; une installation
+  depuis ce paquet dans un manifeste neuf, avec `DOTNET_CLI_HOME` et le cache NuGet isolés, lance `--help` et un gate réel
+  (`--filter MemberNaming`, pire score 9,06, sortie 0). Les 208 tests rapides passent.
+- Reste extérieur au dépôt : choix définitif du nom et de la version, variable GitHub `NUGET_USER`, politique NuGet OIDC,
+  publication d'une Release et installation depuis NuGet.org sur un environnement neuf.
+
 ## Ce qui a été fait à l'étape 11 (duplication)
 
 - Fixture `tests/fixtures/duplication` (clone exact, clone renommé, DTO semblables, code unique) ; jscpd 5.4.2 mesuré : clone exact
@@ -288,6 +302,21 @@ Résultats : 201 tests rapides (+ 27 cas de bout en bout), auto-contrôle de l'o
 **Non vérifié** : la nouvelle sortie sur Tower Attack lui-même (les commandes sont dans la réponse à l'utilisateur) ; l'essai du skill dans
 Claude Code et Codex.
 
+## Premier essai du skill dans Claude Code (projet d'essai `craft-test`)
+
+Projet jetable créé à partir de la fixture `basic` (méthode `Decisions.Ten`, score 10,00 exactement, test existant trop faible), avec les
+outils (CrapSharp 0.1.0-preview.3, Stryker 5.0.0) et le skill. Invocation explicite par `/dotnet-craft`. Constaté dans la réponse de Claude :
+- il a **ajouté un test de bornes avant** de modifier le code (10 tests verts), puis remplacé les neuf `if` par `Math.Clamp(x, 0, 9)` ;
+- `Ten` est passé à 1,00 ; les autres méthodes restent à 6,00 ; jscpd : aucun clone ; il n'a pas commité ;
+- il a rapporté ce qu'il n'avait pas pu vérifier (le code de sortie de la première commande, masqué par `tail`) ;
+- Stryker : 0 tué, 10 survivants, message « test coverage capture failed ». Reproduit et expliqué par moi : après la simplification, `Ten` n'a
+  plus aucun opérateur à muter ; les 10 mutants restants sont dans `Untouched` et `Program.cs`, que les tests n'exécutent pas. C'est un vrai 0 %,
+  pas une panne ; l'avertissement de Stryker est trompeur. Avec seulement le nouveau test (ancien code) : 40 tués sur 45, 72,73 %.
+
+Changements du skill qui en découlent : lire le code de sortie soi-même (ne pas masquer par `tail`) et comment lire ce cas de Stryker.
+
+**Non vérifié** : le déclenchement automatique du skill (essai 3 non fait), l'essai dans Codex, la suite après ce premier essai.
+
 ## Usage
 
 ```bash
@@ -355,8 +384,9 @@ Dans l'ordre de priorité retenu (critères : risque de faux verdict, blocage d'
 
 1. **Finir le pilote sur Tower Attack** : essayer le skill dans Claude Code sur une petite tâche de `Simulation` (une méthode à CC 10 déjà
    couverte), noter scores, durées, faux positifs ; relancer l'outil avec `--exclude`. Puis le même essai dans Codex / ChatGPT.
-2. **Publier le paquet sur NuGet** (compte et clé d'API de l'utilisateur ; identifiant `CrapSharp` et version `0.1.0-preview.1` à confirmer),
-   puis tester `dotnet tool install` et `dotnet tool restore` depuis un projet neuf.
+2. **Publier le paquet sur NuGet** après choix de l'identifiant et de la version : configurer le compte NuGet, la politique
+   Trusted Publishing et `NUGET_USER`, puis publier une GitHub Release. Le workflow, les métadonnées et le guide sont prêts ;
+   l'installation locale depuis un manifeste vierge est vérifiée. L'installation et le restore depuis NuGet restent à tester.
 3. **Trancher les limites révélées par le pilote** : un rapport partiel écrase le JSON complet (`--changed-since` est fait), jscpd ne voit pas les clones renommés, la découverte de fichiers ignore une partie de MSBuild.
 4. **Adaptateur Spec Kit** (étape 13) puis **présentation publique finale** (étape 14), après le pilote.
 

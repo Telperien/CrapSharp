@@ -121,7 +121,7 @@ The Windows example above builds and installs both local .NET tools. On another 
 
 | Host | Status |
 |---|---|
-| Claude Code | documented from the official page (paths and invocation); **not tried by the maintainers** |
+| Claude Code | tried once on a small test project, invoked with `/dotnet-craft`: it added tests first, refactored, ran the CRAP gate, the tests, Stryker and jscpd and reported honestly what it could not verify; automatic loading **not tried** |
 | Codex CLI / IDE extension | documented from the official page; **not tried** |
 | ChatGPT desktop | documented; **not tried**; shell access not stated by the documentation |
 | GitHub Copilot in VS Code (Agent mode) | documented from the official page; **not tried** |

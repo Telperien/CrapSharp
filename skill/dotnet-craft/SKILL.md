@@ -68,6 +68,9 @@ By default the tool runs the tests with coverage itself (coverlet, or the Micros
 | 2 | At least one method scores 10 or more | See 3.1 |
 | 3 | The tests or the coverage command failed | Fix the tests first; the scores shown may be wrong |
 
+Read the exit code of every gate yourself: do not pipe a gate into `tail` or `head` (the pipe hides its exit code), or capture the code
+(`$LASTEXITCODE` in PowerShell, `${PIPESTATUS[0]}` in bash) before filtering the output.
+
 A warning is not a success: "coverage report does not mention … file(s)" flags a production project that the tests do not run
 (its methods score 0 %); "may be stale" flags sources edited after the report was written.
 
@@ -116,6 +119,10 @@ Stryker exits with code 2 when the mutation score is below `--break-at`. Tried o
 2. **Kill the survivors.** Open the HTML report (`StrykerOutput/.../mutation-report.html`), read each survivor: write the behavior
    test that kills it, or conclude the code is unnecessary and delete it.
 3. **No coverage.** A "NoCoverage" mutant points at code no test runs: cover it or delete it.
+   If Stryker prints "test coverage capture failed" and reports 0 killed, first check whether any covered code is left to mutate: after
+   a simplification (for example a body reduced to `Math.Clamp(x, 0, 9)`) the tested method may have no mutable operator left, and the
+   mutants that remain sit in code no test runs. That is a true 0 %, not a broken tool; do not disable coverage analysis to "fix" it.
+   Mutate the files you changed explicitly if you need a score on them (`--mutate "src/App/Decisions.cs"`).
 4. **Threshold.** `--break-at 80` is a starting proposal, to be confirmed by the human for the project; never lower the threshold
    just to get a pass.
 

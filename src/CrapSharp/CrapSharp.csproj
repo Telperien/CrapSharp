@@ -13,12 +13,18 @@
     <ToolCommandName>crapsharp</ToolCommandName>
     <PackageId>CrapSharp</PackageId>
     <Version>0.1.0-preview.1</Version>
+    <Title>CrapSharp</Title>
     <Authors>Nicolas Friederich</Authors>
     <Copyright>Copyright (c) 2026 Nicolas Friederich</Copyright>
-    <Description>Per-method CRAP score (complexity and coverage) for C#, usable as a strict gate in a terminal or in CI.</Description>
+    <Description>Per-method CRAP score and quality gate for C# projects. Runs tests with coverage and reports risky methods in the terminal, CI and AI-assisted workflows.</Description>
+    <PackageTags>csharp;dotnet;dotnet-tool;code-quality;crap;cyclomatic-complexity;code-coverage;ci;tdd</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/Telperien/CrapSharp</PackageProjectUrl>
     <RepositoryUrl>https://github.com/Telperien/CrapSharp</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <PackageReleaseNotes>Initial preview: per-method CRAP gate, Cobertura coverage, changed-file selection and JSON output.</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>
