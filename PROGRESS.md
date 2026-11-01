@@ -444,3 +444,17 @@ Un run partiel (`--changed`, `--changed-since`, `--filter`, `--exclude`) écrase
 porte déjà `scope.complete` (faux pour un run partiel) avec le filtre, la référence et les exclusions, donc un rapport partiel ne peut pas passer
 pour un rapport complet. Un second nom de fichier changerait le contrat de sortie, les tests, le skill et la doc, pour un gain faible. À rouvrir
 seulement si un consommateur lit le fichier sans regarder `scope.complete`.
+
+## Adaptateur Spec Kit (étape 13, premier jet)
+
+Forme retenue : une **extension** Spec Kit (`speckit/crapsharp/` : `extension.yml`, `commands/speckit.crapsharp.gate.md`, `constitution-rules.md`,
+README), sans code C# et sans dépendance du cœur à Spec Kit. Elle ajoute la commande `/speckit-crapsharp-gate` (CRAP avec `--changed-since`,
+Stryker, jscpd, rapport de ce qui n'a pas pu tourner) et un hook **facultatif** `after_implement`.
+
+Vérifié (specify-cli 1.2.6.dev0 installé avec uv, projet jetable `speckit-test`, intégration `claude`) :
+- `specify extension add --dev <chemin>` installe l'extension ; `specify extension list` la montre (1 commande, 1 hook) ;
+- le hook est inscrit dans `.specify/extensions.yml` et la commande générée en skill `.claude/skills/speckit-crapsharp-gate/SKILL.md`.
+La documentation que j'avais lue donnait `--dev <dossier>` comme option avec valeur : c'est un drapeau, le chemin est l'argument.
+
+**Non vérifié** : l'exécution réelle de la commande par un agent (Claude Code, Codex), l'enchaînement `implement` puis hook, l'effet des règles de
+constitution, et les agents autres que Claude. Les hooks facultatifs dépendent du texte des commandes `speckit-implement`, qui peut changer.

@@ -1,0 +1,35 @@
+schema_version: "1.0"
+
+extension:
+  id: crapsharp
+  name: "CrapSharp quality gate"
+  version: "0.1.0"
+  description: "After implementation, check C# code with the per-method CRAP gate (crapsharp), mutation testing (Stryker.NET) and duplication (jscpd)"
+  author: Nicolas Friederich
+  repository: https://github.com/Telperien/CrapSharp
+  license: MIT
+
+requires:
+  speckit_version: ">=0.9.0"
+  tools:
+    - name: dotnet
+      required: true
+
+provides:
+  commands:
+    - name: speckit.crapsharp.gate
+      file: commands/speckit.crapsharp.gate.md
+      description: "Run the CRAP gate, Stryker.NET and jscpd on the C# code just implemented and report what could not be verified"
+
+hooks:
+  after_implement:
+    command: speckit.crapsharp.gate
+    optional: true
+    prompt: "Run the CrapSharp quality gate on the implemented C# code?"
+    description: "CRAP, mutation and duplication checks after implementation"
+
+tags:
+  - "dotnet"
+  - "csharp"
+  - "quality"
+  - "tdd"
