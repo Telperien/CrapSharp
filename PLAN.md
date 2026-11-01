@@ -224,7 +224,7 @@ skill/<nom>/SKILL.md           phase B
 | 9 | Packaging `dotnet tool` (`PackAsTool`, `ToolCommandName=crapsharp`), installation locale et commandes du skill vérifiées | **fait pour l'installation locale** (publication NuGet, licence et Linux/macOS non faits) |
 | 10 | Support des projets sur Microsoft.Testing.Platform (si l'étape 6 confirme le problème) | **fait, à relire** |
 | 11 | Contrôle de duplication (phase C) : choisir entre un outil existant (ex. jscpd) et une brique Roslyn, puis l'intégrer et le valider | **fait provisoirement** : jscpd adopté (option C), brique Roslyn si la limite gêne |
-| 12 | Essai de livraison (phase D) : installation reproductible, CLI/CI, skill dans plusieurs agents et pilote sur un projet .NET réel | à faire |
+| 12 | Essai de livraison (phase D) : installation reproductible, CLI/CI, skill dans plusieurs agents et pilote sur un projet .NET réel | **en cours** : CI Linux + Windows faite ; agents et pilote à faire |
 | 13 | Adaptateur Spec Kit (phase E) prêt à installer : skill, règles de constitution, contrôles du workflow et exemple de projet | à terme |
 | 14 | Description finale (phase F) : expliquer le problème, les outils, l'usage et les limites ; publier les résumés utiles à la découverte | à faire en dernier |
 

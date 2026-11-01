@@ -17,7 +17,7 @@
 | 9 | Packaging `dotnet tool` | **fait en local**, à relire (pas de publication NuGet, pas de licence) |
 | 10 | Microsoft.Testing.Platform | **fait, à relire** |
 | 11 | Duplication | **jscpd adopté** (provisoire), à relire |
-| 12 | Livraison autonome et essais du skill dans plusieurs agents | à faire |
+| 12 | Livraison autonome et essais du skill dans plusieurs agents | **en cours** : CI faite |
 | 13 | Adaptateur Spec Kit | à terme |
 | 14 | Description publique et découvrabilité | à faire en dernier |
 
@@ -198,6 +198,21 @@ seulement `--tool-path` et le manifeste local.
 
 **Non vérifié** : un dépôt .NET réel plus grand (temps, faux positifs) ; Linux et macOS ; aucun test automatisé n'exécute jscpd
 (il dépend de Node et du réseau), la mesure est manuelle ; la brique Roslyn pour les clones renommés n'est pas écrite.
+
+## Ce qui a été fait à l'étape 12 (CI)
+
+- `.github/workflows/ci.yml` : sur `ubuntu-latest` et `windows-latest` (.NET 9 et 10, Node 22) : tests rapides, auto-contrôle CRAP
+  (`dotnet publish` puis `dotnet out/CrapSharp.dll . --threshold 10`), jscpd sur `src`, tests de bout en bout (`CRAPSHARP_E2E=1`).
+- Premier passage, vérifié par l'API publique de GitHub (run sur la branche `ci-workflow`) : **les deux systèmes sont verts**, y
+  compris les tests de bout en bout sur Linux (donc : multi-cible, MTP, Stryker n'est pas concerné, paquet `dotnet tool`, `git`).
+  Durées : tests rapides 14 s (Linux) / 22 s (Windows), auto-contrôle 7 s / 5 s, jscpd 2 s / 9 s.
+
+**À regarder** : les tests de bout en bout durent environ **15 minutes** sur les deux runners (919 s et 926 s) contre 48 s en local.
+Je n'ai pas pu lire les journaux (ils demandent une authentification) : cause non établie (restaurations NuGet à froid sur des
+runners lents, ou une attente fixe). À étudier avant d'exécuter ces tests à chaque `push`.
+
+**Reste de l'étape 12** : manifeste d'outils épinglant `crapsharp` et Stryker.NET sur une copie propre d'un vrai projet .NET ; essai du
+skill dans Claude Code et Codex / ChatGPT ; pilote sur un projet réel ; matrice « testé / documenté / non pris en charge ».
 
 ## Usage
 
