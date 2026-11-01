@@ -16,7 +16,7 @@
 | 8 | Skill complet (discipline ub-mode, `crapsharp`, Stryker.NET) + README | **rédigé, à relire** |
 | 9 | Packaging `dotnet tool` | **fait en local**, à relire (pas de publication NuGet, pas de licence) |
 | 10 | Microsoft.Testing.Platform | **fait, à relire** |
-| 11 | Duplication | à faire |
+| 11 | Duplication | **jscpd adopté** (provisoire), à relire |
 | 12 | Livraison autonome et essais du skill dans plusieurs agents | à faire |
 | 13 | Adaptateur Spec Kit | à terme |
 | 14 | Description publique et découvrabilité | à faire en dernier |
@@ -187,6 +187,17 @@ publication NuGet ou GitHub publique) ; la publication éventuelle sur NuGet.
 
 **Non vérifié** : installation depuis NuGet (le paquet n'y est pas) ; Linux et macOS ; l'installation globale (`-g`) n'a pas été essayée,
 seulement `--tool-path` et le manifeste local.
+
+## Ce qui a été fait à l'étape 11 (duplication)
+
+- Fixture `tests/fixtures/duplication` (clone exact, clone renommé, DTO semblables, code unique) ; jscpd 5.4.2 mesuré : clone exact
+  trouvé, clone renommé **non trouvé**, DTO signalés seulement avec `--min-tokens 30`.
+- Décision de l'utilisateur : jscpd d'abord. Section « Duplication check with jscpd » ajoutée au skill, paragraphe au README.
+- Vérifié à la main : la commande épinglée `npx --yes jscpd@5.4.2 …` sort 1 sur la fixture, 0 sur `src` du dépôt (moins d'une seconde) ;
+  sur `src` + tests, 2 petits clones dans `CoverageProviderTests` (non corrigés, hors gate).
+
+**Non vérifié** : un dépôt .NET réel plus grand (temps, faux positifs) ; Linux et macOS ; aucun test automatisé n'exécute jscpd
+(il dépend de Node et du réseau), la mesure est manuelle ; la brique Roslyn pour les clones renommés n'est pas écrite.
 
 ## Usage
 

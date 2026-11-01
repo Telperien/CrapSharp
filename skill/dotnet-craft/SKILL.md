@@ -31,7 +31,7 @@ must not claim to have run them.
 5. **Deterministic checks**, in this order, once the tests are green:
    - per-method CRAP under the threshold (section 3);
    - mutation tests on the code you touched (section 4);
-   - duplication: there is no tool in this repository yet, so do it by hand (look for similar code before writing more).
+   - duplication (section 5).
 
 ## 3. CRAP check with `crapsharp`
 
@@ -115,7 +115,27 @@ Stryker exits with code 2 when the mutation score is below `--break-at`. Tried o
 4. **Threshold.** `--break-at 80` is a starting proposal, to be confirmed by the human for the project; never lower the threshold
    just to get a pass.
 
-## 5. Practice
+## 5. Duplication check with jscpd
+
+[jscpd](https://github.com/kucherenko/jscpd) finds copied code. It needs Node.js. Run it on the production sources:
+
+```bash
+npx --yes jscpd@5.4.2 src --format csharp --min-tokens 50 --min-lines 3 --threshold 0 --ignore "**/bin/**,**/obj/**"
+```
+
+It exits with code 1 as soon as any clone of at least 50 tokens exists (`--threshold` is the allowed percentage of duplicated
+lines, here 0) and lists each pair with its locations; code 0 means none. Tried on a fixture of this repository (an exact
+15-line clone is reported, exit code 1) and on this repository's own `src` (no clone, exit code 0, under a second).
+
+1. **When a clone is reported**, extract the shared behavior into one place and call it from both; do not raise `--min-tokens`
+   to silence it. Check the tests still pass afterwards.
+2. **Known limits.** jscpd compares tokens as written, so a clone whose identifiers or literals were renamed is **not** found
+   (measured on the fixture); look for similar structure yourself when two methods read alike. A lower `--min-tokens` (30)
+   starts reporting declarative boilerplate such as look-alike DTO records; keep 50 unless you review every hit.
+3. **Tests.** Run the same command on the test folders for information only: setup repeated across tests is not always worth
+   removing, and it is not part of the gate.
+
+## 6. Practice
 
 - Keep a **journal** of actions and their reasons (what was tried, measured, abandoned): short and dated.
 - **Save context**: run commands with options that limit their output, read files by range.

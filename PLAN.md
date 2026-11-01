@@ -223,7 +223,7 @@ skill/<nom>/SKILL.md           phase B
 | 8 | Skill portable (phase B) : discipline ub-mode pour .NET, `crapsharp`, Stryker.NET ; politique d'exécution des mutations ; README | **rédigé, à relire** (invocation dans les agents et `dotnet tool` non vérifiées : étapes 9 et 12) |
 | 9 | Packaging `dotnet tool` (`PackAsTool`, `ToolCommandName=crapsharp`), installation locale et commandes du skill vérifiées | **fait pour l'installation locale** (publication NuGet, licence et Linux/macOS non faits) |
 | 10 | Support des projets sur Microsoft.Testing.Platform (si l'étape 6 confirme le problème) | **fait, à relire** |
-| 11 | Contrôle de duplication (phase C) : choisir entre un outil existant (ex. jscpd) et une brique Roslyn, puis l'intégrer et le valider | à faire |
+| 11 | Contrôle de duplication (phase C) : choisir entre un outil existant (ex. jscpd) et une brique Roslyn, puis l'intégrer et le valider | **fait provisoirement** : jscpd adopté (option C), brique Roslyn si la limite gêne |
 | 12 | Essai de livraison (phase D) : installation reproductible, CLI/CI, skill dans plusieurs agents et pilote sur un projet .NET réel | à faire |
 | 13 | Adaptateur Spec Kit (phase E) prêt à installer : skill, règles de constitution, contrôles du workflow et exemple de projet | à terme |
 | 14 | Description finale (phase F) : expliquer le problème, les outils, l'usage et les limites ; publier les résumés utiles à la découverte | à faire en dernier |
@@ -334,6 +334,27 @@ Non essayé : xunit.v3, TUnit, NUnit sous MTP ; Linux et macOS.
 qu'il faut pouvoir croire. Le skill peut toutefois être rédigé en parallèle, car il dépend peu des détails de l'outil.
 Ses commandes d'installation et d'exécution devront être vérifiées avec le package réel de l'étape 9 avant de le
 considérer terminé.
+
+**Étape 11 — première mesure de jscpd** (5.4.2, Node 24, installé hors du dépôt ; fixture `tests/fixtures/duplication`, valeurs
+attendues fixées à la main : un clone exact `Summarize` de 15 lignes entre `Orders.cs` et `Invoices.cs`, un clone renommé `Describe`
+(mêmes structures, autres identifiants et littéraux), des DTO déclaratifs semblables à ne pas signaler, du code sans duplication) :
+
+| Réglage | Clone exact `Summarize` | Clone renommé `Describe` | DTO (faux positif) |
+|---|---|---|---|
+| `--min-tokens 50 --min-lines 3` | trouvé (15 lignes, 79 jetons) | **non trouvé** | non signalé |
+| `--min-tokens 30` | trouvé | **non trouvé** | **signalé** (5 lignes) |
+
+- Le code de sortie existe (`--threshold <pourcentage>` : 1 si plus de N % de lignes dupliquées, essayé avec 5 et 25) mais
+  c'est un pourcentage global, pas un verdict par paire comme le rang `≥ 0,8` de dryer.
+- jscpd compare des jetons tels quels : il rate un clone dont on a renommé les identifiants. Il propose aussi une détection
+  « sémantique » expérimentale par modèle d'embeddings (téléchargement de 548 Mo), non essayée.
+- Orientations : **A** adopter jscpd tel quel (`--min-tokens 50`), limite documentée ; **B** écrire une brique Roslyn qui normalise
+  identifiants et littéraux, compare les corps de méthodes et ignore les membres déclaratifs (demande du code, des tests et une
+  définition du seuil) ; **C** A maintenant, B si la limite gêne en pratique. Décision : **C** (jscpd d'abord). La commande du skill (`npx --yes jscpd@5.4.2 src --format csharp --min-tokens 50
+--min-lines 3 --threshold 0 --ignore "**/bin/**,**/obj/**"`) a été essayée sur la fixture (code 1, un clone) et sur `src` du dépôt (code 0, moins
+d'une seconde). Sur `src` + les tests, 2 clones de 5 à 6 lignes apparaissent dans `CoverageProviderTests` (préparation répétée) : jugés
+acceptables, la duplication des tests n'est pas dans le gate. Reste à faire pour clore l'étape : un dépôt .NET réel plus grand et la
+vérification du comportement sous Linux.
 
 **Étape 11 — définition de terminé.** Comparer l'outil choisi à des exemples C# de duplication réelle et de code
 semblable sans duplication problématique. Établir la signification de son seuil : le rang `≥ 0,8` de dryer ne se

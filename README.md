@@ -56,6 +56,12 @@ display (`crap`) and the exact score compared with the threshold (`crapRaw`).
 Mutations are left to [Stryker.NET](https://stryker-mutator.io/), without rewriting it; the procedure is in
 [`skill/dotnet-craft/SKILL.md`](skill/dotnet-craft/SKILL.md).
 
+## Duplication
+
+Duplicate code is checked with [jscpd](https://github.com/kucherenko/jscpd) (Node.js), as described in the skill:
+`npx --yes jscpd@5.4.2 src --format csharp --min-tokens 50 --min-lines 3 --threshold 0 --ignore "**/bin/**,**/obj/**"`.
+It finds exact clones only, not renamed ones.
+
 ## Known limits
 
 - Coverage is by **lines** only; matching by line ranges is an approximation (two members on the same line share the same result).
