@@ -437,3 +437,10 @@ Environnement : Windows 11, SDK .NET 10.0.401, runtime 10.0.12.
   les tests ne tournent pas et demande de sortir du bac à sable. **À retester.**
 - Conclusion provisoire : le chargement automatique fonctionne dans les deux outils sur ce prompt ; le respect de la discipline dépend de
   l'environnement d'exécution (bac à sable de Codex) et reste à confirmer.
+
+## Décision : rapport partiel
+
+Un run partiel (`--changed`, `--changed-since`, `--filter`, `--exclude`) écrase toujours `.metrics/crap.json`. Je ne sépare pas le fichier : le JSON
+porte déjà `scope.complete` (faux pour un run partiel) avec le filtre, la référence et les exclusions, donc un rapport partiel ne peut pas passer
+pour un rapport complet. Un second nom de fichier changerait le contrat de sortie, les tests, le skill et la doc, pour un gain faible. À rouvrir
+seulement si un consommateur lit le fichier sans regarder `scope.complete`.

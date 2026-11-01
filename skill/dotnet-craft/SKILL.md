@@ -75,7 +75,7 @@ By default the tool runs the tests with coverage itself (coverlet, or the Micros
 | 2 | At least one method scores 10 or more | See 3.1 |
 | 3 | The tests or the coverage command failed | Fix the tests first; the scores shown may be wrong |
 
-Read the exit code of every gate yourself: do not pipe a gate into `tail` or `head` (the pipe hides its exit code), or capture the code
+Read the exit code of every gate yourself. Never write `<gate> | tail` or `| head`, not even to shorten the output: do not pipe a gate into `tail` or `head` (the pipe hides its exit code), or capture the code
 (`$LASTEXITCODE` in PowerShell, `${PIPESTATUS[0]}` in bash) before filtering the output.
 
 A warning is not a success: "coverage report does not mention … file(s)" flags a production project that the tests do not run
