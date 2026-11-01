@@ -425,3 +425,15 @@ CRAPSHARP_E2E=1 dotnet test --filter Category=EndToEnd          # 29 cas attendu
 ```
 
 Environnement : Windows 11, SDK .NET 10.0.401, runtime 10.0.12.
+
+## Déclenchement automatique du skill (même prompt, sans nommer le skill)
+
+- **Claude Code** : le skill s'est chargé seul (« Skill exécuté »). Tests de caractérisation (9 cas) ajoutés **avant** la modification, tests lancés
+  avant/après (1, 10, 10), gate CRAP (`Ten` 1,00, maximum 6,00). Il a dit ne pas avoir lancé Stryker ni jscpd. Il a de nouveau passé le gate dans
+  `tail` et l'a reconnu (« je n'ai pas lu le code de sortie réel ») malgré la consigne du skill.
+- **Codex** : essai 1 (texte du skill d'alors) : le skill s'annonce, mais refactor sans aucun test, sans `dotnet test`, gate `--no-coverage` seulement.
+  Essai 2 (skill renforcé : ordre tests/gate/changement/re-vérification) : tentative de `dotnet test` (jamais de résultat dans le bac à sable,
+  alors que la commande prend 2,5 s chez moi), code modifié quand même, aucun test ajouté. Le skill interdit maintenant de modifier le code tant que
+  les tests ne tournent pas et demande de sortir du bac à sable. **À retester.**
+- Conclusion provisoire : le chargement automatique fonctionne dans les deux outils sur ce prompt ; le respect de la discipline dépend de
+  l'environnement d'exécution (bac à sable de Codex) et reste à confirmer.

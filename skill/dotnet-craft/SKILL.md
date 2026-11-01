@@ -28,6 +28,13 @@ must not claim to have run them.
 3. **Test behavior, not implementation.** A test must survive a refactoring that changes nothing observable. Never write a test
    only to lower a number (see 3.1).
 4. **Refactoring**: freeze behavior with tests, change the structure, prove nothing changed (same green tests, same checks).
+   A refactoring is never "obviously safe" and never skips this order, even for a one-line replacement:
+   1. run the existing tests and the CRAP gate (section 3) to get the starting point;
+   2. add tests until the current behavior is pinned, boundaries included (they pass at once: say so, there is no red phase);
+   3. change the code;
+   4. run the same tests and the same gate again, then sections 4 and 5.
+   Reading the code and compiling it proves nothing about behavior. If you changed code without running the tests, say so
+   plainly and do not call the change behavior-preserving.
 5. **Deterministic checks**, in this order, once the tests are green:
    - per-method CRAP under the threshold (section 3);
    - mutation tests on the code you touched (section 4);
@@ -74,8 +81,9 @@ Read the exit code of every gate yourself: do not pipe a gate into `tail` or `he
 A warning is not a success: "coverage report does not mention … file(s)" flags a production project that the tests do not run
 (its methods score 0 %); "may be stale" flags sources edited after the report was written.
 
-If the environment blocks the gate (a sandbox that stops coverage collection, Stryker or a build server), ask for permission to run it
-outside the sandbox. Never report a gate as passed from a run that produced no real score: `--no-coverage` only shows complexity, and an
+If the environment blocks the gate (a sandbox that stops coverage collection, Stryker or a build server) or a test command does not
+finish (the tests of a small project take seconds outside a sandbox: a long silence means the environment is in the way, not that the
+tests are slow), ask for permission to run it outside the sandbox. Do not change the code while the tests cannot run. Never report a gate as passed from a run that produced no real score: `--no-coverage` only shows complexity (it is not the CRAP gate, and `--threshold` is refused with it), and an
 exit code 0 from a filtered or empty run proves nothing. Say which gate you could not run and why.
 
 ### 3.1 What to do about a high score

@@ -121,8 +121,8 @@ The Windows example above builds and installs both local .NET tools. On another 
 
 | Host | Status |
 |---|---|
-| Claude Code | tried once on a small test project, invoked with `/dotnet-craft`: it added tests first, refactored, ran the CRAP gate, the tests, Stryker and jscpd and reported honestly what it could not verify; automatic loading **not tried** |
-| Codex desktop app | tried once on the same test project, invoked with `$dotnet-craft`: it refactored with a boundary test, reached CRAP 1.00 and jscpd 0 clones, and reported what the sandbox blocked (coverage collection, Stryker); the CRAP gate needed a run outside the sandbox; automatic loading **not tried** |
+| Claude Code | tried once on a small test project, invoked with `/dotnet-craft`: it added tests first, refactored, ran the CRAP gate, the tests, Stryker and jscpd and reported honestly what it could not verify; automatic loading (same prompt without naming the skill): it loaded the skill, wrote characterization tests first, ran the tests before and after and the CRAP gate, and said it had not run Stryker or jscpd |
+| Codex desktop app | tried once on the same test project, invoked with `$dotnet-craft`: it refactored with a boundary test, reached CRAP 1.00 and jscpd 0 clones, and reported what the sandbox blocked (coverage collection, Stryker); the CRAP gate needed a run outside the sandbox; automatic loading (same prompt without naming the skill): it announced the skill, but with the first skill text it changed the code without tests, and when its tests never finished in the sandbox it changed the code anyway; the skill now forbids that. Re-test pending |
 | Codex CLI / IDE extension | documented from the official page; **not tried** |
 | ChatGPT desktop | documented; **not tried**; shell access not stated by the documentation |
 | GitHub Copilot in VS Code (Agent mode) | documented from the official page; **not tried** |
