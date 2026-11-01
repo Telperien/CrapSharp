@@ -220,7 +220,7 @@ skill/<nom>/SKILL.md           phase B
 | 5 | Corrections issues des reviews 1 et 2 (détail en §9) | **fait** |
 | 6 | **Fixtures réelles et tests de bout en bout** (détail ci-dessous) | **fait, à relire** (reste : voir ci-dessous) |
 | 7 | Validation indépendante des scores attendus sur les fixtures ; comparaison complémentaire avec ReportGenerator et évaluation de son éventuelle réutilisation | **fait, à relire** |
-| 8 | Skill portable (phase B) : discipline ub-mode pour .NET, `crapsharp`, Stryker.NET ; politique d'exécution des mutations ; README | à faire |
+| 8 | Skill portable (phase B) : discipline ub-mode pour .NET, `crapsharp`, Stryker.NET ; politique d'exécution des mutations ; README | **rédigé, à relire** (invocation dans les agents et `dotnet tool` non vérifiées : étapes 9 et 12) |
 | 9 | Packaging `dotnet tool` (`PackAsTool`, `ToolCommandName=crapsharp`), installation locale et commandes du skill vérifiées | à faire |
 | 10 | Support des projets sur Microsoft.Testing.Platform (si l'étape 6 confirme le problème) | **fait, à relire** |
 | 11 | Contrôle de duplication (phase C) : choisir entre un outil existant (ex. jscpd) et une brique Roslyn, puis l'intégrer et le valider | à faire |
@@ -357,6 +357,31 @@ commande exacte dans le skill. Vérifier le temps d'exécution et les faux posit
 - décider séparément si un plugin est nécessaire pour distribuer le skill dans ChatGPT web/mobile. Cette distribution
   ne conditionne pas l'usage de la CLI et du skill dans les hôtes locaux déjà vérifiés.
 
+**Pilote sur un grand dépôt .NET — protocole de validation.** Commencer sur une solution représentative, dans une copie
+isolée du dépôt, avec un rapport Cobertura récent et la version de CrapSharp fixée. Lancer d'abord sans `--threshold`
+pour établir le tableau complet, puis évaluer le seuil 10 en CI sans bloquer les livraisons pendant l'observation.
+
+- **Exactitude du périmètre et du score** : confronter les fichiers et membres trouvés à la solution réellement compilée ;
+  expliquer chaque projet absent de la couverture (0 %) et chaque avertissement. Recalculer manuellement un échantillon
+  comprenant les scores les plus élevés, ceux proches de 10, des méthodes non couvertes, des `switch` et des lambdas ;
+  vérifier les lignes appariées, la CC, la couverture et le CRAP brut. CA1502 sert de comparaison sur les constructions
+  communes, pas d'oracle sur les écarts documentés en §4.2.
+- **Comportement du gate** : sur la copie, provoquer un score au seuil, un rapport sans fichier correspondant et un
+  échec de tests ; vérifier respectivement les codes 2, 1 et 3. Ajouter puis retirer un test utile doit déplacer le
+  score comme prévu. Répéter l'analyse sur les mêmes entrées pour vérifier la stabilité du verdict.
+- **Coût et faux positifs** : relever durée et mémoire de l'analyse séparément de la collecte de couverture, coût
+  supplémentaire en CI, nombre de méthodes signalées, diagnostics jugés utiles et cas acceptables comme une simple
+  table de correspondance. Fixer avec l'équipe le budget de temps et la politique de dérogation avant d'activer un gate
+  bloquant.
+- **Skill, une fois prêt** : faire essayer des tâches C# réelles par au moins deux agents et un développeur, vérifier
+  l'installation, l'appel effectif des contrôles, l'interprétation des codes de sortie et la qualité des tests ajoutés.
+  Comparer l'effort et les résultats au processus habituel de l'équipe.
+
+Pour la CI, lancer d'abord une analyse complète : `--changed` lit actuellement les modifications présentes dans
+`git status`, donc ne représente pas à lui seul les changements d'une PR déjà commitée. `--filter` et `--changed`
+écrasent aussi `.metrics/crap.json` avec un rapport marqué `scope.complete = false` ; conserver le rapport complet
+séparément lors des essais ciblés.
+
 **Distribution au-delà du dépôt GitHub (à préparer aux étapes 9, 12 et 14).** Le dépôt héberge les sources ; il ne
 publie pas automatiquement l'outil dans les catalogues ni n'installe le skill chez les utilisateurs. Garder une seule
 source du `SKILL.md` et fournir des procédures d'installation vérifiées, sans maintenir plusieurs copies divergentes.
@@ -416,7 +441,7 @@ attendre de trancher tous les points avant de commencer l'étape 6.
 | 7 | Couverture des branches de Cobertura | Conserver la couverture par lignes pour le CRAP tant qu'un cas réel ne justifie pas une autre convention ; documenter l'écart avec les autres outils. |
 | 8 ou plus tard | Dérogation au gate pour une grande table de correspondance simple | Mesurer le besoin sur le pilote ; garder sa CC mesurée même si une dérogation motivée au seuil est finalement prévue. |
 | 7 | Réutiliser ReportGenerator ou poursuivre le calcul propre à CrapSharp | **Proposé, à valider** : poursuivre le calcul propre (CC recoupée avec CA1502, écarts en §4.2, gate avec code de sortie) ; ReportGenerator n'a ni gate ni la même CC (§6, résultats de l'étape 7). |
-| 8 | Nom du skill (`/crap-mode` pour CRAP seul, `/ub-dotnet` ou autre pour la discipline complète) | Choisir un nom cohérent avec son périmètre et vérifier l'invocation dans les hôtes visés. |
+| 8 | Nom du skill (`/crap-mode` pour CRAP seul, `/ub-dotnet` ou autre pour la discipline complète) — ****`dotnet-craft` retenu** (le préfixe `ub-` aurait pu suggérer un lien avec l'auteur d'ub-mode)** | Choisir un nom cohérent avec son périmètre et vérifier l'invocation dans les hôtes visés. |
 | 8, 12 | Règle de mutation Stryker.NET : quand lancer le contrôle et quel verdict rend la CI rouge | Séparer le retour rapide du contrôle potentiellement long ; documenter la commande, le seuil retenu et un cas d'échec attendu. |
 | 9, 12 | Identifiant et version du package, mode de distribution, licence du projet | Tester au moins un manifeste `dotnet tool` depuis une copie propre ; décider ensuite de la publication NuGet. Fournir une licence explicite avant toute diffusion publique. |
 | 6, 12 | `--changed` / `--filter` et `.metrics/crap.json` | **Partiel** : métadonnées `scope.complete` ajoutées (§4.6) ; un rapport partiel écrase toujours le fichier. Reste à décider d'un second fichier, et à vérifier les consommateurs (skill). |

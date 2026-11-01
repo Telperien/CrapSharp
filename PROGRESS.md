@@ -13,7 +13,7 @@
 | 5 | Corrections issues des reviews 1 (Codex) et 2 (Claude) | fait |
 | 6 | Fixtures réelles et tests de bout en bout | **fait, à relire** (manques listés plus bas) |
 | 7 | Oracle de complexité indépendant et comparaison avec ReportGenerator | **fait, à relire** |
-| 8 | Skill complet (discipline ub-mode, `crapsharp`, Stryker.NET) + README | à faire |
+| 8 | Skill complet (discipline ub-mode, `crapsharp`, Stryker.NET) + README | **rédigé, à relire** |
 | 9 | Packaging `dotnet tool` | à faire |
 | 10 | Microsoft.Testing.Platform | **fait, à relire** |
 | 11 | Duplication | à faire |
@@ -154,6 +154,25 @@ changé. **À valider aussi** : l'avertissement « périmé » est informatif
 **Toujours non vérifié** : Linux et macOS ; les constructions de §4.2 absentes de `constructs` (par exemple `and` / `not`,
 `goto`, `lock`) ; une correspondance partielle de chemins dans un seul projet (seul un projet entier absent est testé).
 
+## Ce qui a été fait à l'étape 8
+
+- `skill/dotnet-craft/SKILL.md` : discipline en trois temps (faire fonctionner, faire bien, pratique), gate CRAP (commande, codes de
+  sortie, que faire d'un score élevé, ce que le score ne prouve pas), mutations avec Stryker.NET, pratique (journal, petits
+  commits). Texte original, rédigé en anglais (décision de l'utilisateur : fichiers publics en anglais ; PLAN.md, PROGRESS.md et REVIEWS.md restent en français).
+- `README.md` : présentation, utilisation, options, codes de sortie, limites, développement, licence.
+- Vérifié à la main : `dotnet new tool-manifest` puis `dotnet tool install dotnet-stryker` (Stryker.NET 5.0.0), puis
+  `dotnet stryker --project App.csproj --break-at N` depuis le dossier du projet de tests de la fixture `basic` : 57 mutants,
+  36 tués, 9 survivants, score 65,45 % ; code 0 avec `--break-at 60`, code 2 avec `--break-at 100`. Formule de couverture
+  nécessaire recalculée (CC 4 → 27,9 %, CC 8 → 68,5 %).
+
+**À valider** : (nom retenu : `dotnet-craft`) ; le seuil de départ `--break-at 80`, simple proposition ; la politique « mutations avant de proposer
+le changement, pas dans la boucle TDD ».
+
+**Non vérifié** : l'installation et l'invocation du skill dans Claude Code, Codex ou ChatGPT (étape 12) ; `crapsharp` en
+`dotnet tool` (étape 9, le skill indique donc `dotnet publish` puis `dotnet <dll>`) ; Stryker sur un projet de tests
+Microsoft.Testing.Platform ; la section « duplication » du skill est volontairement une consigne manuelle (étape 11) ; il n'y a
+toujours pas de licence.
+
 ## Usage
 
 ```bash
@@ -216,7 +235,7 @@ Vérifications plus anciennes (étape 4, avant les changements de l'étape 5) : 
 
 ## Reste à faire
 
-Voir la feuille de route (PLAN.md §6). Étapes 6, 7 et 10 faites, à relire (convention de complexité décidée, §4.2 et §8) ; prochaine étape : **8** (skill et README).
+Voir la feuille de route (PLAN.md §6). Étapes 6, 7, 8 (rédigée) et 10 faites, à relire ; prochaine étape : **9** (packaging `dotnet tool`), qui permettra de vérifier les commandes du skill.
 
 ## Comment vérifier
 
