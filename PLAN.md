@@ -2,7 +2,7 @@
 
 > À relire par une autre IA / un humain avant de critiquer ou de continuer le travail.
 > État détaillé et mode d'emploi : [PROGRESS.md](PROGRESS.md). Texte intégral des reviews : [REVIEWS.md](REVIEWS.md).
-> Dernière mise à jour : 2026-11-01, étape 6 réalisée (fixtures réelles, tests de bout en bout) et trous de la review 3 comblés ; en attente de relecture.
+> Dernière mise à jour : 2026-11-01, étapes 6 et 7 réalisées (fixtures réelles, oracle indépendant de complexité, comparaison avec ReportGenerator) ; en attente de relecture.
 
 ## 1. Contexte
 
@@ -41,7 +41,7 @@ capables d'accéder au dépôt et d'exécuter les outils. L'intégration Spec Ki
 
 | Phase | Contenu | État |
 |---|---|---|
-| A | Outil `crapsharp` (CRAP par méthode), fiable et validé | en cours (étapes 1 à 6 faites, 6 à relire, 7 à faire) |
+| A | Outil `crapsharp` (CRAP par méthode), fiable et validé | en cours (étapes 1 à 7 faites, 6 et 7 à relire) |
 | B | Skill portable (discipline ub-mode + `crapsharp` + **Stryker.NET** pour les mutations), packaging | à faire |
 | C | Contrôle de duplication : choix, intégration et validation | à faire |
 | D | Distribution et essai de bout en bout : CLI/CI autonomes, skill utilisable par plusieurs agents | à faire |
@@ -94,7 +94,8 @@ CC = 1 + nombre de points de décision dans le membre.
 | `goto`, `break`, `return`, `throw`, `is` simple, `not` | 0 | |
 
 Cette convention suit McCabe et crapper (chaque étiquette de `switch` compte, comme pour Java chez crapper). Elle peut
-différer de Visual Studio ou de ReportGenerator ; l'étape 7 mesure ces écarts au lieu de les supposer nuls.
+différer de Visual Studio ou de ReportGenerator. **Mesuré à l'étape 7** : elle coïncide avec l'analyseur Microsoft CA1502 (celui
+de Visual Studio) sur toutes les méthodes des fixtures ; ReportGenerator affiche une autre complexité (voir §6).
 
 ### 4.3 Ce qui est mesuré
 
@@ -190,7 +191,7 @@ skill/<nom>/SKILL.md           phase B
 | 4 | CLI : lancement de `dotnet test`, détection des projets, `--changed`, `--filter`, `--coverage-command`… | fait |
 | 5 | Corrections issues des reviews 1 et 2 (détail en §9) | **fait** |
 | 6 | **Fixtures réelles et tests de bout en bout** (détail ci-dessous) | **fait, à relire** (reste : voir ci-dessous) |
-| 7 | Validation indépendante des scores attendus sur les fixtures ; comparaison complémentaire avec ReportGenerator et évaluation de son éventuelle réutilisation | à faire |
+| 7 | Validation indépendante des scores attendus sur les fixtures ; comparaison complémentaire avec ReportGenerator et évaluation de son éventuelle réutilisation | **fait, à relire** |
 | 8 | Skill portable (phase B) : discipline ub-mode pour .NET, `crapsharp`, Stryker.NET ; politique d'exécution des mutations ; README | à faire |
 | 9 | Packaging `dotnet tool` (`PackAsTool`, `ToolCommandName=crapsharp`), installation locale et commandes du skill vérifiées | à faire |
 | 10 | Support des projets sur Microsoft.Testing.Platform (si l'étape 6 confirme le problème) | à faire |
@@ -234,7 +235,27 @@ examiné particulièrement sur les lambdas, les fonctions locales et plusieurs m
   périmètre analysé et la provenance de la couverture. Éviter qu'un rapport `--changed` / `--filter` passe pour un
   rapport complet.
 
-**Étape 7 :** ReportGenerator est utile pour confronter la présentation de la couverture et examiner une solution
+**Résultats de l'étape 7** (mesurés le 2026-11-01, ReportGenerator 5.5.12, coverlet 6.0.0, SDK 10.0.401) :
+
+- *Oracle de complexité indépendant.* L'analyseur Microsoft **CA1502** (règle de métriques de code de `Microsoft.CodeAnalysis.NetAnalyzers`,
+  même métrique que Visual Studio ; seuil réglé à 1 par `CodeMetricsConfig.txt` pour qu'il rapporte toutes les méthodes) ne
+  partage aucun code avec CrapSharp. Le test `ComplexityOracleTests` (5 fixtures, de bout en bout) vérifie que notre CC est
+  **identique** à la sienne pour chaque méthode : `Ten` 10, `Score` 5 (fonction locale et lambda comprises), `Evens` 3,
+  `LoadAsync` 2, `Sign` 3, instructions de niveau supérieur 2, etc. Les conventions de §4.2 sont donc cohérentes avec cet outil
+  de référence pour les constructions des fixtures ; les autres constructions de §4.2 ne sont pas recoupées.
+- *ReportGenerator n'est pas un oracle de CC.* Il affiche la complexité du Cobertura de coverlet, calculée sur l'IL : `Ten` 18
+  (au lieu de 10), `Sign` 4 (3), `Evens` 4 (3), `LoadAsync` 4 (2), `Score` 6 (5) avec la fonction locale `Weight` comptée à part.
+  Son CRAP en découle (`Ten` : 18 au lieu de 10). Même seuil, verdicts différents.
+- *Couverture par méthode.* Celle de ReportGenerator coïncide avec la nôtre, sauf là où coverlet sépare une fonction locale du
+  membre englobant (`Score` : 66,66 % pour lui, 76,5 % pour nous, qui additionnons `Weight` conformément à §4.2).
+  Coverlet n'écrit aucune entrée pour `Second` dans `sameline` (il n'y figure que `First`) : notre calcul par lignes lui donne 100 %.
+- *Gate strict.* ReportGenerator sort toujours avec le code 0, même avec `metricThresholdForCrapScore=5` alors que `Ten` (18)
+  le dépasse ; les « risk hotspots » n'apparaissent que dans le HTML. Il ne peut pas servir de gate par méthode sans script
+  supplémentaire. Mesure faite à la main, une fois, non automatisée (outil installé hors du dépôt).
+- *Conclusion proposée* (à valider) : garder le calcul de CrapSharp ; ReportGenerator reste utile pour visualiser la
+  couverture. Voir §7.
+
+**Étape 7 (plan d'origine) :** ReportGenerator est utile pour confronter la présentation de la couverture et examiner une solution
 existante. Il expose déjà une métrique CRAP et des seuils de risque
 ([réglages](https://github.com/danielpalme/ReportGenerator/wiki/Settings)), mais sa
 [documentation](https://github.com/danielpalme/ReportGenerator/wiki/Calculation-details) précise qu'il affiche les
@@ -290,11 +311,15 @@ les contrôles après `implement` ([extensions](https://github.github.io/spec-ki
 [workflows](https://github.github.io/spec-kit/reference/workflows.html)). Vérifier les résultats et les codes de
 sortie dans ce contexte. L'adaptateur réutilise les commandes de l'étape 12 ; le cœur ne dépend pas de Spec Kit.
 
-**Critère de valeur ajoutée.** À l'étape 7 puis sur le pilote de l'étape 12, comparer le résultat et l'effort d'usage à
-ReportGenerator + Stryker.NET + l'outil de duplication retenu. La formule CRAP seule n'est pas nouvelle ; CrapSharp
-doit apporter un diagnostic par méthode et un gate .NET plus fiables ou plus simples à utiliser pour justifier sa
-maintenance. Un score CRAP < 10 reste un indicateur de risque, pas une preuve de couverture ni de correction : une
-méthode de CC 1 non couverte obtient CRAP 2.
+**Critère de valeur ajoutée.** À l'étape 7 puis sur un pilote, comparer trois situations : (1) IA + Spec Kit avec sa
+configuration initiale ; (2) IA + Spec Kit configuré pour la qualité .NET avec ReportGenerator, Stryker.NET et l'outil
+de duplication retenu ; (3) le skill et les contrôles de CrapSharp, avec ou sans Spec Kit. Mesurer les problèmes
+détectés, les faux positifs, le temps d'installation et de configuration, le temps d'exécution et l'effort pour répéter
+les contrôles sur plusieurs projets ou agents. Le scénario (2) représente une équipe ayant déjà investi dans une
+configuration équivalente ; il ne doit pas être confondu avec Spec Kit installé sans ces règles. La formule CRAP seule
+n'est pas nouvelle : CrapSharp doit apporter une vérification et une expérience d'usage qui justifient sa maintenance.
+Un score CRAP < 10 reste un indicateur de risque, pas une preuve de couverture ni de correction : une méthode de CC 1
+non couverte obtient CRAP 2.
 
 ## 7. Décisions restantes, au moment où elles deviennent nécessaires
 
@@ -307,7 +332,7 @@ attendre de trancher tous les points avant de commencer l'étape 6.
 | 6 | Projet de tests exécuté avec succès mais sans rapport, alors que d'autres rapports existent ; sélection vide avec `--changed` ou `--filter` | **Pris provisoirement à l'étape 6, à valider à la relecture** : avertissement nommant le projet (0 % pour ce que lui seul couvre) ; erreur si aucun projet n'a de rapport ; `--filter` sans correspondance → 1, `--changed` sans changement → 0 (§4.4). |
 | 6–7 | Une ou plusieurs cibles .NET, `DefineConstants`, fichiers `Compile`, projets hors racine de `.sln`, `Directory.Build.props` | Choisir le périmètre réellement compilé que l'outil promet ; mesurer les écarts sur fixtures avant de décider du support MSBuild. |
 | 7 | Couverture des branches de Cobertura | Conserver la couverture par lignes pour le CRAP tant qu'un cas réel ne justifie pas une autre convention ; documenter l'écart avec les autres outils. |
-| 7 | Réutiliser ReportGenerator ou poursuivre le calcul propre à CrapSharp | Comparer scores et effort d'usage sur les mêmes fixtures, avec des valeurs attendues établies indépendamment (§6). |
+| 7 | Réutiliser ReportGenerator ou poursuivre le calcul propre à CrapSharp | **Proposé, à valider** : poursuivre le calcul propre (CC alignée sur CA1502, gate avec code de sortie) ; ReportGenerator n'a ni gate ni la même CC (§6, résultats de l'étape 7). |
 | 8 | Nom du skill (`/crap-mode` pour CRAP seul, `/ub-dotnet` ou autre pour la discipline complète) | Choisir un nom cohérent avec son périmètre et vérifier l'invocation dans les hôtes visés. |
 | 8, 12 | Règle de mutation Stryker.NET : quand lancer le contrôle et quel verdict rend la CI rouge | Séparer le retour rapide du contrôle potentiellement long ; documenter la commande, le seuil retenu et un cas d'échec attendu. |
 | 9, 12 | Identifiant et version du package, mode de distribution, licence du projet | Tester au moins un manifeste `dotnet tool` depuis une copie propre ; décider ensuite de la publication NuGet. Fournir une licence explicite avant toute diffusion publique. |
@@ -356,7 +381,7 @@ Texte complet dans [REVIEWS.md](REVIEWS.md).
 | Claude | Options inconnues ignorées, pas de `--help` | **Corrigé** : options strictes, `--help` / `-h` |
 | Codex 4 | Instructions de niveau supérieur ignorées | **Corrigé** : une entrée par fichier (§4.3) |
 | Codex 4 | `#if`, multi-cible, fichiers liés, code généré | **Documenté** (§4.3) ; multi-cible **vérifié** (fixture `multitarget`) |
-| Codex 5 | Conventions de complexité à spécifier avec exemples | **Fait** (§4.2) ; comparaison avec ReportGenerator à l'étape 7 |
+| Codex 5 | Conventions de complexité à spécifier avec exemples | **Fait** (§4.2) ; recoupée avec CA1502 (identique) et ReportGenerator (autre métrique), étape 7 |
 | Codex 2 | Limites du rapprochement par lignes à mesurer | **Mesuré** sur `closures` et `sameline` ; limites en §4.4 |
 | Codex | Contrat de la CLI à détailler | **Fait** (§4.5, `--help`, PROGRESS.md) |
 | Codex | Tests de bout en bout avec vrais rapports coverlet | **Fait** (14 tests, étape 6 ; manques listés en §6) |
@@ -366,7 +391,7 @@ Texte complet dans [REVIEWS.md](REVIEWS.md).
 | Codex | Compatibilité uml-viewer | Hors périmètre (§7.5) |
 | Claude | Microsoft.Testing.Platform incompatible avec `--collect` | **Constaté** (fixture `mtp`, SDK 10) : `dotnet test` refuse le projet, code 1 avec message ; support à l'étape 10 |
 | Codex 3 | Un rapport partiel ou une seule cible peut produire un gate trompeur ; `NewestPerRun` ne garde qu'un rapport par projet | **Confirmé puis corrigé** : sur `multitarget`, un rapport était perdu (6,00 au lieu de 2,00) ; tous les rapports d'un run sont lus. Projet de tests sans rapport : avertissement (§4.4) |
-| Codex 3 | ReportGenerator expose CRAP mais ne recalcule pas les métriques fournies | **Ajouté** à l'étape 7 : valeurs attendues établies indépendamment |
+| Codex 3 | ReportGenerator expose CRAP mais ne recalcule pas les métriques fournies | **Confirmé** : il relit la CC IL de coverlet ; oracle indépendant = CA1502 (étape 7) |
 | Codex 3 | Seuil CLI non fini, modes concurrents, JSON tronqué et périmètre implicite | **Corrigé** (étape 6) : seuil fini > 0, sources de couverture exclusives, valeur manquante, `crapRaw`, `scope`, `coverage`, sélection vide (§4.4 à 4.6) |
 | Utilisateur | Une correspondance partielle est légitime si aucun test n'utilise un projet de production | **Décidé et implémenté** : avertissement par projet, 0 % ; erreur seulement si aucun fichier n'est apparié |
 | Utilisateur | L'usage avec Claude, ChatGPT et d'autres contextes prime ; Spec Kit viendra ensuite | **Intégré** : CLI/CI autonomes et skill portable à l'étape 12, adaptateur Spec Kit à l'étape 13 |

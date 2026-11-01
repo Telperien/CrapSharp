@@ -2,7 +2,7 @@
 
 > Fichier destiné à la **review par une autre IA ou un humain**. Mis à jour à chaque étape.
 > Objectif, conventions de mesure et feuille de route : [PLAN.md](PLAN.md). Reviews : [REVIEWS.md](REVIEWS.md).
-> Dernière mise à jour : 2026-11-01 — étape 6 réalisée, **en attente de relecture** ; rien de l'étape 6 n'est commité.
+> Dernière mise à jour : 2026-11-01 — étapes 6 et 7 réalisées, **en attente de relecture** ; l'étape 7 n'est pas commitée.
 > Un commit initial (`3d8d55f`) existe ; les travaux suivants restent dans l'arbre de travail.
 
 ## Résumé de l'état
@@ -12,7 +12,7 @@
 | 1-4 | Outil `crapsharp` : complexité, couverture, score, CLI complète | fait |
 | 5 | Corrections issues des reviews 1 (Codex) et 2 (Claude) | fait |
 | 6 | Fixtures réelles et tests de bout en bout | **fait, à relire** (manques listés plus bas) |
-| 7 | Comparaison avec ReportGenerator | à faire |
+| 7 | Oracle de complexité indépendant et comparaison avec ReportGenerator | **fait, à relire** |
 | 8 | Skill complet (discipline ub-mode, `crapsharp`, Stryker.NET) + README | à faire |
 | 9 | Packaging `dotnet tool` | à faire |
 | 10-11 | Microsoft.Testing.Platform, duplication | à faire |
@@ -102,6 +102,21 @@ au nouveau `dotnet test` (`global.json`) et les deux collecteurs MTP (étape 10)
 les fixtures ne sont construites qu'avec coverlet.collector 6.0.0, xunit 2.5.3 et MSTest 4.0.2. Les tests de bout en
 bout dépendent du réseau (NuGet) et de la présence des runtimes .NET 9 et 10.
 
+## Ce qui a changé à l'étape 7
+
+Aucun changement de l'outil : des mesures et un test.
+
+- **Test ajouté** : `ComplexityOracleTests` (de bout en bout, 5 fixtures). Il compile chaque fixture avec l'analyseur Microsoft
+  CA1502 réglé à un seuil de 1 et compare sa complexité, méthode par méthode, à celle de `ComplexityCalculator`. Résultat :
+  identique partout (rouge d'abord tant que la configuration de l'analyseur était incomplète, puis vert).
+- **ReportGenerator 5.5.12** essayé à la main sur les rapports Cobertura des fixtures : CC différente (IL de coverlet, `Ten` 18
+  au lieu de 10), couverture identique sauf fonctions locales, code de sortie toujours 0 (pas de gate). Détail dans PLAN.md §6.
+- **Proposition à valider** : poursuivre le calcul propre à CrapSharp (PLAN.md §7).
+
+**Non vérifié** : seules les constructions présentes dans les 5 fixtures sont recoupées avec CA1502 (pas les `switch`, `when`,
+`??`, `?.`, motifs `and`/`or` de §4.2) ; ReportGenerator n'a été lancé qu'à la main, une fois ; la CC de CA1502 dépend du
+SDK 10.0.401.
+
 ## Usage
 
 ```bash
@@ -163,12 +178,12 @@ Vérifications plus anciennes (étape 4, avant les changements de l'étape 5) : 
 
 ## Reste à faire
 
-Voir la feuille de route (PLAN.md §6). Étape 6 faite, à relire par Codex ; prochaine étape : **7** (comparaison avec ReportGenerator).
+Voir la feuille de route (PLAN.md §6). Étapes 6 et 7 faites, à relire ; prochaine étape : **8** (skill), ou 10 (MTP) selon la relecture.
 
 ## Comment vérifier
 
 ```bash
-dotnet test                                                     # 155 réussis, 14 ignorés
+dotnet test                                                     # 155 réussis, 15 ignorés
 dotnet publish src/CrapSharp -o ./out
 dotnet ./out/CrapSharp.dll . --threshold 10                     # lance les tests avec couverture, doit sortir 0
 ```
@@ -176,7 +191,7 @@ dotnet ./out/CrapSharp.dll . --threshold 10                     # lance les test
 Tests de bout en bout (lents, réseau NuGet) :
 
 ```bash
-CRAPSHARP_E2E=1 dotnet test --filter Category=EndToEnd          # 14 attendus
+CRAPSHARP_E2E=1 dotnet test --filter Category=EndToEnd          # 14 tests + 5 cas de l'oracle de complexité
 ```
 
 Environnement : Windows 11, SDK .NET 10.0.401, runtime 10.0.12.

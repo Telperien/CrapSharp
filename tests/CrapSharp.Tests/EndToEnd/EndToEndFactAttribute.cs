@@ -14,3 +14,13 @@ public sealed class EndToEndFactAttribute : FactAttribute
             Skip = $"slow end-to-end test: set {EnvironmentVariable}=1 to run it";
     }
 }
+
+/// <summary>Theory counterpart of <see cref="EndToEndFactAttribute"/>.</summary>
+public sealed class EndToEndTheoryAttribute : TheoryAttribute
+{
+    public EndToEndTheoryAttribute()
+    {
+        if (Environment.GetEnvironmentVariable(EndToEndFactAttribute.EnvironmentVariable) != "1")
+            Skip = $"slow end-to-end test: set {EndToEndFactAttribute.EnvironmentVariable}=1 to run it";
+    }
+}
