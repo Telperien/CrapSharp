@@ -54,7 +54,7 @@ The command exits with code 2 in this example. It also writes `.metrics/crap.jso
 `CRAP = CC² × (1 − coverage)³ + CC`, where CC is the cyclomatic complexity of the method and coverage the fraction of its lines
 run by the tests. A score must be **strictly below N** to pass: a method with CC ≥ N fails even at 100 % coverage, so the code has
 to be simplified. The exact conventions (what counts for complexity, how coverage is matched, what is excluded) are specified in
-[PLAN.md section 4](https://github.com/Telperien/CrapSharp/blob/main/PLAN.md).
+[docs/conventions.md](https://github.com/Telperien/CrapSharp/blob/main/docs/conventions.md).
 
 ## Usage
 
@@ -113,7 +113,7 @@ It finds exact clones only, not renamed ones.
 
 - Coverage is by **lines** only; matching by line ranges is an approximation (two members on the same line share the same result).
 - Syntactic analysis without MSBuild: no `DefineConstants`, linked files or `Directory.Build.props`.
-- Complexity follows CrapSharp's convention; it differs from CA1502 (Visual Studio) on five constructs (PLAN.md section 4.2).
+- Complexity follows CrapSharp's convention; it differs from CA1502 (Visual Studio) on five constructs ([docs/conventions.md](https://github.com/Telperien/CrapSharp/blob/main/docs/conventions.md)).
 - Tried on Windows and Linux (CI), with xUnit and MSTest, and once on a real Godot game; macOS, NUnit, xunit.v3 and TUnit are not verified.
 
 ## Development
@@ -124,11 +124,9 @@ CRAPSHARP_E2E=1 dotnet test --filter Category=EndToEnd   # end-to-end tests on t
 dotnet publish src/CrapSharp -c Release -o ./out && dotnet ./out/CrapSharp.dll . --threshold 10   # the tool scores itself: must exit 0
 ```
 
-Tracking: [PLAN.md](https://github.com/Telperien/CrapSharp/blob/main/PLAN.md) (specification, roadmap, decisions),
-[PROGRESS.md](https://github.com/Telperien/CrapSharp/blob/main/PROGRESS.md) (state), and
-[REVIEWS.md](https://github.com/Telperien/CrapSharp/blob/main/REVIEWS.md) (reviews). These three files are in French.
-The [release guide](https://github.com/Telperien/CrapSharp/blob/main/docs/releasing.md) covers package validation and the
-NuGet publishing setup.
+See [CONTRIBUTING.md](https://github.com/Telperien/CrapSharp/blob/main/CONTRIBUTING.md) to contribute and the
+[release guide](https://github.com/Telperien/CrapSharp/blob/main/docs/releasing.md) for package validation and the
+NuGet publishing setup. Security reports: [SECURITY.md](https://github.com/Telperien/CrapSharp/blob/main/SECURITY.md).
 
 ## License
 

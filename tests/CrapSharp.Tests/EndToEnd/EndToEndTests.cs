@@ -4,7 +4,7 @@ namespace CrapSharp.Tests.EndToEnd;
 
 /// <summary>
 /// The published tool on real mini-solutions (tests/fixtures). Every expected value was worked out by hand from the
-/// fixture sources: CC = 1 + decisions (PLAN.md 4.2), coverage = hit lines / reported lines of the member,
+/// fixture sources: CC = 1 + decisions (docs/conventions.md (Complexity)), coverage = hit lines / reported lines of the member,
 /// CRAP = CC^2 * (1 - coverage)^3 + CC. Where coverlet reported something the hand model did not foresee, the test
 /// pins what coverlet reported and the comment says why.
 /// </summary>
@@ -96,7 +96,7 @@ public class EndToEndTests
 
         var run = fixture.Run("--threshold", "10");
 
-        // Known limit (PLAN.md 4.4), pinned here: First and Second share line 5 and the tests only call First,
+        // Known limit (docs/conventions.md, Coverage), pinned here: First and Second share line 5 and the tests only call First,
         // yet both read 100 % (CC 2, CRAP 2). Second is in truth untested: the line approximation cannot tell.
         Assert.Equal(0, run.ExitCode);
         AssertEntry(run.EntryOf("Pair.First(int)"), 2, 100, 2);
@@ -137,7 +137,7 @@ public class EndToEndTests
 
         var run = fixture.Run("--threshold", "10");
 
-        // DeterministicReport=true keeps /_/src/Lib/Rules.cs in the Cobertura file: nothing matches (PLAN.md 4.4).
+        // DeterministicReport=true keeps /_/src/Lib/Rules.cs in the Cobertura file: nothing matches (docs/conventions.md, Coverage).
         Assert.Equal(1, run.ExitCode);
         Assert.Contains("none of the 1 analyzed file(s) appears in the coverage report", run.Error);
         Assert.Contains("/_/", run.Error);

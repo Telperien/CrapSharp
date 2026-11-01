@@ -60,7 +60,7 @@ public partial class ComplexityOracleTests
         Assert.Equal(KnownDifferences(fixtureName), differences);
     }
 
-    // Constructs where PLAN.md 4.2 and CA1502 disagree, pinned so that a change on either side is noticed:
+    // Constructs where docs/conventions.md (Complexity) and CA1502 disagree, pinned so that a change on either side is noticed:
     // CA1502 counts the `default` label of a switch statement (6 for 4 labels + default; 4.2 says 5), and counts nothing
     // for `??=`, catch clauses, switch expression arms and `or` patterns (4.2 counts each).
     private static List<(string Key, int Ours, int Oracle)> KnownDifferences(string fixtureName) => fixtureName == "constructs"

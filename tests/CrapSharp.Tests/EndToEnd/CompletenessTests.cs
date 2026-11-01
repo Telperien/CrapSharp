@@ -15,7 +15,7 @@ public class CompletenessTests
         var run = fixture.Run("--threshold", "10");
 
         // Alpha.Pick: CC 2, covered. Orphan's assembly is never loaded by a test, so coverlet does not mention its file:
-        // Calculator.Positive is CC 2, 0 %, CRAP = 2^2 * 1^3 + 2 = 6, and the warning names the project (PLAN.md 4.4).
+        // Calculator.Positive is CC 2, 0 %, CRAP = 2^2 * 1^3 + 2 = 6, and the warning names the project (docs/conventions.md, Coverage).
         Assert.Equal(0, run.ExitCode);
         Assert.Matches(@"warning: coverage report does not mention 1 analyzed file\(s\) in project src.Orphan.Orphan\.csproj", run.Error);
         AssertEntry(run.EntryOf("Alpha.Pick(bool)"), 2, 100, 2);
