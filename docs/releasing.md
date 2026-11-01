@@ -1,7 +1,7 @@
 # Releasing CrapSharp to NuGet
 
-The package is prepared but has not been published. Keep `0.1.0-preview.1` until the external pilot and the supported agent
-hosts have been checked. Choose a stable version only after that validation. Publishing a GitHub Release is the explicit
+The current package version is `0.1.0-preview.1`. Keep a preview version until the external pilot and the supported agent
+hosts have been checked; choose a stable version only after that validation. Publishing a GitHub Release is the explicit
 publication step; pushing a tag alone does not run the NuGet workflow.
 
 ## Before the first release
@@ -9,11 +9,12 @@ publication step; pushing a tag alone does not run the NuGet workflow.
 1. Check that `CrapSharp` is available as a package ID on [NuGet.org](https://www.nuget.org/packages/CrapSharp) and that the
    chosen version is unused. Confirm the public name and version.
 2. Update `<Version>` and `<PackageReleaseNotes>` in `src/CrapSharp/CrapSharp.csproj`, plus the installation examples in
-   `README.md` and `docs/using-the-skill.md`. Remove the README's pending-release wording before packaging. The skill
-   currently documents installation from a local source; update it when NuGet installation has actually been verified.
+   `README.md` if the version changes. The skill in `docs/using-the-skill.md` currently documents installation from a local
+   source; update it when NuGet installation has actually been verified.
 3. Run `dotnet test --configuration Release`, the end-to-end tests (`CRAPSHARP_E2E=1`), and
    `dotnet pack src/CrapSharp -c Release -o artifacts/nuget`. Install that package in a clean directory and run
-   `crapsharp --help` and a gate on a fixture. The release workflow repeats these checks.
+   `crapsharp --help` and a gate on a fixture. After pushing the changes, run **Publish NuGet** manually from the Actions
+   tab on `main`. This manual run repeats the checks and stops before NuGet login or push.
 4. In the repository settings, create an Actions variable `NUGET_USER` with the **nuget.org profile name** of the publishing
    account (not its email address). No long-lived NuGet API key is stored in GitHub.
 5. On [nuget.org Trusted Publishing](https://learn.microsoft.com/en-us/nuget/nuget-org/trusted-publishing), create a GitHub
@@ -25,7 +26,8 @@ publication step; pushing a tag alone does not run the NuGet workflow.
 ## Publish
 
 1. Merge the release changes, then create a tag `v<Version>` at that commit, such as `v0.1.0-preview.1`.
-2. Create and **publish** a GitHub Release for that tag. Mark a version containing `-` as a prerelease. The
+2. Create and **publish** a GitHub Release for that tag, after the manual workflow run passes. Mark a version containing
+   `-` as a prerelease. The
    `.github/workflows/publish-nuget.yml` workflow checks that the tag matches the project version and that the prerelease
    flag agrees with it, runs tests, packs, installs the package into a new directory, requests a temporary key through
    `NuGet/login@v1`, and pushes the `.nupkg` to NuGet.org.

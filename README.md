@@ -9,15 +9,14 @@ the same checks while changing code. It is a .NET counterpart of the discipline 
 
 ## Quick start
 
-The first NuGet release is pending. Once it is available, install the version shown on
-[NuGet.org](https://www.nuget.org/packages/CrapSharp):
+To install the preview when it appears on [NuGet.org](https://www.nuget.org/packages/CrapSharp):
 
 ```bash
 dotnet tool install --global CrapSharp --version 0.1.0-preview.1
 crapsharp . --threshold 10
 ```
 
-Until then, pack and install the tool locally from a CrapSharp checkout:
+If the package is not listed yet, pack and install the tool locally from a CrapSharp checkout:
 
 ```bash
 dotnet pack src/CrapSharp -c Release -o ./nupkg

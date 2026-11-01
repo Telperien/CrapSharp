@@ -199,8 +199,8 @@ seulement `--tool-path` et le manifeste local.
   Le SDK .NET 10 inclut SourceLink ; le `.nupkg` contient aussi le README et la licence MIT déclarée.
 - README réorganisé avec une installation NuGet clairement annoncée comme future et une sortie de la fixture `basic` ;
   `docs/releasing.md` décrit la politique Trusted Publishing, la Release GitHub et la vérification après publication.
-- `.github/workflows/publish-nuget.yml` publie uniquement à la publication explicite d'une GitHub Release : version du tag
-  contrôlée, tests, pack, installation depuis le paquet local, puis clé temporaire OIDC et push NuGet.
+- `.github/workflows/publish-nuget.yml` peut être lancé manuellement pour valider tests, pack et installation sans publier.
+  Seule une GitHub Release publiée déclenche ensuite le contrôle du tag, la clé temporaire OIDC et le push NuGet.
 - Vérifié localement : `dotnet pack` crée `CrapSharp.0.1.0-preview.1.nupkg` avec les métadonnées attendues ; une installation
   depuis ce paquet dans un manifeste neuf, avec `DOTNET_CLI_HOME` et le cache NuGet isolés, lance `--help` et un gate réel
   (`--filter MemberNaming`, pire score 9,06, sortie 0). Les 208 tests rapides passent.

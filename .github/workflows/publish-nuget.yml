@@ -1,8 +1,9 @@
 name: Publish NuGet
 
-# Publishing a GitHub Release is the deliberate release step. A pushed tag alone
-# does not publish a package.
+# A manual run validates without publishing. Publishing a GitHub Release is the
+# deliberate release step; a pushed tag alone does not publish a package.
 on:
+  workflow_dispatch:
   release:
     types: [published]
 
@@ -35,17 +36,19 @@ jobs:
         run: |
           set -euo pipefail
           version="$(dotnet msbuild src/CrapSharp/CrapSharp.csproj -getProperty:Version -nologo)"
-          if [[ "$GITHUB_REF_NAME" != "v$version" ]]; then
-            echo "Release tag $GITHUB_REF_NAME does not match package version $version" >&2
-            exit 1
-          fi
-          if [[ "$version" == *-* && "$RELEASE_PRERELEASE" != "true" ]]; then
-            echo "Mark a prerelease package as a GitHub prerelease" >&2
-            exit 1
-          fi
-          if [[ "$version" != *-* && "$RELEASE_PRERELEASE" == "true" ]]; then
-            echo "A stable package needs a stable GitHub Release" >&2
-            exit 1
+          if [[ "$GITHUB_EVENT_NAME" == "release" ]]; then
+            if [[ "$GITHUB_REF_NAME" != "v$version" ]]; then
+              echo "Release tag $GITHUB_REF_NAME does not match package version $version" >&2
+              exit 1
+            fi
+            if [[ "$version" == *-* && "$RELEASE_PRERELEASE" != "true" ]]; then
+              echo "Mark a prerelease package as a GitHub prerelease" >&2
+              exit 1
+            fi
+            if [[ "$version" != *-* && "$RELEASE_PRERELEASE" == "true" ]]; then
+              echo "A stable package needs a stable GitHub Release" >&2
+              exit 1
+            fi
           fi
           echo "PACKAGE_VERSION=$version" >> "$GITHUB_ENV"
 
@@ -72,10 +75,13 @@ jobs:
         run: |
           set -euo pipefail
           install_dir="$(mktemp -d)"
-          dotnet tool install CrapSharp --tool-path "$install_dir" --version "$PACKAGE_VERSION" --add-source "$PWD/artifacts/nuget"
+          local_feed="$RUNNER_TEMP/crapsharp-local.config"
+          printf '<configuration><packageSources><clear/><add key="local" value="%s"/></packageSources></configuration>\n' "$PWD/artifacts/nuget" > "$local_feed"
+          dotnet tool install CrapSharp --tool-path "$install_dir" --version "$PACKAGE_VERSION" --configfile "$local_feed"
           "$install_dir/crapsharp" --help
 
       - name: Check NuGet account setting
+        if: github.event_name == 'release'
         env:
           NUGET_USER: ${{ vars.NUGET_USER }}
         run: |
@@ -85,12 +91,14 @@ jobs:
           fi
 
       - name: Get temporary NuGet publishing key
+        if: github.event_name == 'release'
         id: login
         uses: NuGet/login@v1
         with:
           user: ${{ vars.NUGET_USER }}
 
       - name: Publish package
+        if: github.event_name == 'release'
         env:
           NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
         run: dotnet nuget push "artifacts/nuget/CrapSharp.$PACKAGE_VERSION.nupkg" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json
