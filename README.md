@@ -7,7 +7,8 @@ A .NET counterpart of [unclebob/ub-mode](https://github.com/unclebob/ub-mode):
 - **`skill/dotnet-craft`**, a skill (`SKILL.md`) describing the working discipline (strict TDD, refactoring, deterministic checks)
   and calling `crapsharp` and Stryker.NET.
 
-> Status: the tool is usable from source. The `dotnet tool` package, a license and duplication detection are not done yet
+> Status: the tool is usable from source and installs as a local `dotnet tool` from a local package. Publication on NuGet, a license and
+> duplication detection are not done yet
 > (see [PLAN.md](PLAN.md), written in French).
 
 ## The score
@@ -23,9 +24,13 @@ Requirements: the .NET 10 SDK. Test projects must produce a Cobertura report: `c
 `Microsoft.Testing.Extensions.CodeCoverage` / `coverlet.MTP` (Microsoft.Testing.Platform).
 
 ```bash
-dotnet publish src/CrapSharp -c Release -o ./out
-dotnet ./out/CrapSharp.dll . --threshold 10
+dotnet pack src/CrapSharp -c Release -o ./nupkg
+dotnet new tool-manifest          # skip if the repository already has a manifest
+dotnet tool install CrapSharp --version 0.1.0-preview.1 --add-source ./nupkg
+dotnet crapsharp . --threshold 10
 ```
+
+The package is not published on NuGet yet. `dotnet publish src/CrapSharp -o ./out` followed by `dotnet ./out/CrapSharp.dll …` also works.
 
 The tool runs the tests with coverage, prints a table (worst score first) and writes `.metrics/crap.json`.
 
@@ -63,7 +68,7 @@ Mutations are left to [Stryker.NET](https://stryker-mutator.io/), without rewrit
 ```bash
 dotnet test                                              # fast tests
 CRAPSHARP_E2E=1 dotnet test --filter Category=EndToEnd   # end-to-end tests on tests/fixtures (slow, needs NuGet)
-dotnet ./out/CrapSharp.dll . --threshold 10              # the tool scores itself: must exit 0
+dotnet publish src/CrapSharp -c Release -o ./out && dotnet ./out/CrapSharp.dll . --threshold 10   # the tool scores itself: must exit 0
 ```
 
 Tracking: [PLAN.md](PLAN.md) (specification, roadmap, decisions), [PROGRESS.md](PROGRESS.md) (state),

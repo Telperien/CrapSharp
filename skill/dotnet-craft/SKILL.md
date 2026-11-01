@@ -39,12 +39,19 @@ must not claim to have run them.
 The goal is **strictly below 10** for every method: a score equal to 10 fails.
 
 ```bash
-crapsharp . --threshold 10
+dotnet crapsharp . --threshold 10
 ```
 
-Until the `dotnet tool` package is published, publish the tool from this repository and run
-`dotnet <folder>/CrapSharp.dll . --threshold 10` (`dotnet publish src/CrapSharp -o <folder>`). The commands were tried that way;
-installation as a `dotnet tool` has not been verified yet.
+Install it as a local tool. The package is not on NuGet yet, so pack it from this repository and install it from that folder:
+
+```bash
+dotnet pack src/CrapSharp -c Release -o ./nupkg
+dotnet new tool-manifest          # skip if the repository already has a manifest
+dotnet tool install CrapSharp --version 0.1.0-preview.1 --add-source ./nupkg
+```
+
+This sequence is exercised by an end-to-end test (clean manifest, `--help`, a strict gate on a fixture). With `dotnet tool install
+--tool-path <folder>` the command is `<folder>/crapsharp`. Installation from NuGet, and on Linux or macOS, has not been verified.
 
 By default the tool runs the tests with coverage itself (coverlet, or the Microsoft.Testing.Platform extensions), prints a table
 (worst score first) and writes `.metrics/crap.json`. Useful options: `--changed` (files modified according to git),

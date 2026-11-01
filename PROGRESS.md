@@ -14,7 +14,7 @@
 | 6 | Fixtures réelles et tests de bout en bout | **fait, à relire** (manques listés plus bas) |
 | 7 | Oracle de complexité indépendant et comparaison avec ReportGenerator | **fait, à relire** |
 | 8 | Skill complet (discipline ub-mode, `crapsharp`, Stryker.NET) + README | **rédigé, à relire** |
-| 9 | Packaging `dotnet tool` | à faire |
+| 9 | Packaging `dotnet tool` | **fait en local**, à relire (pas de publication NuGet, pas de licence) |
 | 10 | Microsoft.Testing.Platform | **fait, à relire** |
 | 11 | Duplication | à faire |
 | 12 | Livraison autonome et essais du skill dans plusieurs agents | à faire |
@@ -173,6 +173,21 @@ le changement, pas dans la boucle TDD ».
 Microsoft.Testing.Platform ; la section « duplication » du skill est volontairement une consigne manuelle (étape 11) ; il n'y a
 toujours pas de licence.
 
+## Ce qui a été fait à l'étape 9
+
+- `CrapSharp.csproj` : `PackAsTool`, `ToolCommandName=crapsharp`, `PackageId=CrapSharp`, version `0.1.0-preview.1`, README dans le paquet.
+- Test de bout en bout `PackagingTests` : `dotnet pack` avec une version unique, manifeste d'outils vierge, `dotnet tool install
+  --add-source`, `dotnet crapsharp --help` (code 0), puis le gate strict sur la fixture `basic` (code 2, `Ten` = 10 exactement).
+- Essayé à la main : installation avec `--tool-path` (commande `crapsharp` directe) ; le paquet contient bien `DotnetToolSettings.xml`
+  et le README.
+- Les commandes du skill et du README utilisent maintenant `dotnet crapsharp` après `dotnet pack` et `dotnet tool install`.
+
+**À décider** : l'identifiant `CrapSharp` et la version `0.1.0-preview.1` (propositions) ; la licence (indispensable avant toute
+publication NuGet ou GitHub publique) ; la publication éventuelle sur NuGet.
+
+**Non vérifié** : installation depuis NuGet (le paquet n'y est pas) ; Linux et macOS ; l'installation globale (`-g`) n'a pas été essayée,
+seulement `--tool-path` et le manifeste local.
+
 ## Usage
 
 ```bash
@@ -235,7 +250,7 @@ Vérifications plus anciennes (étape 4, avant les changements de l'étape 5) : 
 
 ## Reste à faire
 
-Voir la feuille de route (PLAN.md §6). Étapes 6, 7, 8 (rédigée) et 10 faites, à relire ; prochaine étape : **9** (packaging `dotnet tool`), qui permettra de vérifier les commandes du skill.
+Voir la feuille de route (PLAN.md §6). Étapes 6, 7, 8 (rédigée) et 10 faites, à relire ; étape 9 faite en local ; prochaines étapes : **11** (duplication) puis **12** (essai de livraison dans plusieurs agents).
 
 ## Comment vérifier
 

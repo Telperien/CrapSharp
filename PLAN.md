@@ -221,7 +221,7 @@ skill/<nom>/SKILL.md           phase B
 | 6 | **Fixtures réelles et tests de bout en bout** (détail ci-dessous) | **fait, à relire** (reste : voir ci-dessous) |
 | 7 | Validation indépendante des scores attendus sur les fixtures ; comparaison complémentaire avec ReportGenerator et évaluation de son éventuelle réutilisation | **fait, à relire** |
 | 8 | Skill portable (phase B) : discipline ub-mode pour .NET, `crapsharp`, Stryker.NET ; politique d'exécution des mutations ; README | **rédigé, à relire** (invocation dans les agents et `dotnet tool` non vérifiées : étapes 9 et 12) |
-| 9 | Packaging `dotnet tool` (`PackAsTool`, `ToolCommandName=crapsharp`), installation locale et commandes du skill vérifiées | à faire |
+| 9 | Packaging `dotnet tool` (`PackAsTool`, `ToolCommandName=crapsharp`), installation locale et commandes du skill vérifiées | **fait pour l'installation locale** (publication NuGet, licence et Linux/macOS non faits) |
 | 10 | Support des projets sur Microsoft.Testing.Platform (si l'étape 6 confirme le problème) | **fait, à relire** |
 | 11 | Contrôle de duplication (phase C) : choisir entre un outil existant (ex. jscpd) et une brique Roslyn, puis l'intégrer et le valider | à faire |
 | 12 | Essai de livraison (phase D) : installation reproductible, CLI/CI, skill dans plusieurs agents et pilote sur un projet .NET réel | à faire |
