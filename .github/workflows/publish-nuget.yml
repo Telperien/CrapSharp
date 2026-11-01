@@ -49,6 +49,13 @@ jobs:
           fi
           echo "PACKAGE_VERSION=$version" >> "$GITHUB_ENV"
 
+      - name: Check package README is ready
+        run: |
+          if grep -q 'The first NuGet release is pending' README.md; then
+            echo "Update the README installation section before publishing" >&2
+            exit 1
+          fi
+
       - name: Fast tests
         run: dotnet test --configuration Release
 

@@ -9,8 +9,8 @@ publication step; pushing a tag alone does not run the NuGet workflow.
 1. Check that `CrapSharp` is available as a package ID on [NuGet.org](https://www.nuget.org/packages/CrapSharp) and that the
    chosen version is unused. Confirm the public name and version.
 2. Update `<Version>` and `<PackageReleaseNotes>` in `src/CrapSharp/CrapSharp.csproj`, plus the installation examples in
-   `README.md` and `docs/using-the-skill.md`. The skill currently documents installation from a local source; update it when
-   NuGet installation has actually been verified.
+   `README.md` and `docs/using-the-skill.md`. Remove the README's pending-release wording before packaging. The skill
+   currently documents installation from a local source; update it when NuGet installation has actually been verified.
 3. Run `dotnet test --configuration Release`, the end-to-end tests (`CRAPSHARP_E2E=1`), and
    `dotnet pack src/CrapSharp -c Release -o artifacts/nuget`. Install that package in a clean directory and run
    `crapsharp --help` and a gate on a fixture. The release workflow repeats these checks.

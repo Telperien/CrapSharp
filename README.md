@@ -5,7 +5,7 @@ your threshold. Use the .NET tool directly in a terminal or CI, or pair it with 
 the same checks while changing code. It is a .NET counterpart of the discipline in [unclebob/ub-mode](https://github.com/unclebob/ub-mode).
 
 [![CI](https://github.com/Telperien/CrapSharp/actions/workflows/ci.yml/badge.svg)](https://github.com/Telperien/CrapSharp/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/Telperien/CrapSharp/blob/main/LICENSE)
 
 ## Quick start
 
@@ -27,7 +27,8 @@ dotnet crapsharp . --threshold 10
 ```
 
 Run these commands from the CrapSharp checkout. To install it in another repository, give `--add-source` the absolute path to
-the package directory. The [skill installation guide](docs/using-the-skill.md) gives the full cross-repository procedure.
+the package directory. The [skill installation guide](https://github.com/Telperien/CrapSharp/blob/main/docs/using-the-skill.md)
+gives the full cross-repository procedure.
 
 Here is the output for the repository's `basic` fixture (with coverage). The first method is fully covered but still reaches
 the threshold because its complexity is 10:
@@ -53,7 +54,7 @@ The command exits with code 2 in this example. It also writes `.metrics/crap.jso
 `CRAP = CC² × (1 − coverage)³ + CC`, where CC is the cyclomatic complexity of the method and coverage the fraction of its lines
 run by the tests. A score must be **strictly below N** to pass: a method with CC ≥ N fails even at 100 % coverage, so the code has
 to be simplified. The exact conventions (what counts for complexity, how coverage is matched, what is excluded) are specified in
-[PLAN.md section 4](PLAN.md).
+[PLAN.md section 4](https://github.com/Telperien/CrapSharp/blob/main/PLAN.md).
 
 ## Usage
 
@@ -86,12 +87,12 @@ display (`crap`) and the exact score compared with the threshold (`crapRaw`).
 ## Using the skill
 
 Installation in Claude Code, Codex and GitHub Copilot, and a table of what has and has not been tested:
-[docs/using-the-skill.md](docs/using-the-skill.md).
+[docs/using-the-skill.md](https://github.com/Telperien/CrapSharp/blob/main/docs/using-the-skill.md).
 
 ## Mutation testing
 
 Mutations are left to [Stryker.NET](https://stryker-mutator.io/), without rewriting it; the procedure is in
-[`skill/dotnet-craft/SKILL.md`](skill/dotnet-craft/SKILL.md).
+[`skill/dotnet-craft/SKILL.md`](https://github.com/Telperien/CrapSharp/blob/main/skill/dotnet-craft/SKILL.md).
 
 ## Duplication
 
@@ -114,12 +115,14 @@ CRAPSHARP_E2E=1 dotnet test --filter Category=EndToEnd   # end-to-end tests on t
 dotnet publish src/CrapSharp -c Release -o ./out && dotnet ./out/CrapSharp.dll . --threshold 10   # the tool scores itself: must exit 0
 ```
 
-Tracking: [PLAN.md](PLAN.md) (specification, roadmap, decisions), [PROGRESS.md](PROGRESS.md) (state),
-[REVIEWS.md](REVIEWS.md) (reviews). These three files are in French.
-The [release guide](docs/releasing.md) covers package validation and the NuGet publishing setup.
+Tracking: [PLAN.md](https://github.com/Telperien/CrapSharp/blob/main/PLAN.md) (specification, roadmap, decisions),
+[PROGRESS.md](https://github.com/Telperien/CrapSharp/blob/main/PROGRESS.md) (state), and
+[REVIEWS.md](https://github.com/Telperien/CrapSharp/blob/main/REVIEWS.md) (reviews). These three files are in French.
+The [release guide](https://github.com/Telperien/CrapSharp/blob/main/docs/releasing.md) covers package validation and the
+NuGet publishing setup.
 
 ## License
 
-[MIT](LICENSE). You may use, copy, modify and distribute this project, but the copyright line (Nicolas Friederich - CrapSharp) and the license text
+[MIT](https://github.com/Telperien/CrapSharp/blob/main/LICENSE). You may use, copy, modify and distribute this project, but the copyright line (Nicolas Friederich - CrapSharp) and the license text
 must be kept in all copies or substantial portions of it. This covers the tool, the skill and the documentation. The package depends on
 Roslyn (`Microsoft.CodeAnalysis`), which keeps its own MIT license.
