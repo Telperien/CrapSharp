@@ -15,7 +15,8 @@
 | 7 | Oracle de complexité indépendant et comparaison avec ReportGenerator | **fait, à relire** |
 | 8 | Skill complet (discipline ub-mode, `crapsharp`, Stryker.NET) + README | à faire |
 | 9 | Packaging `dotnet tool` | à faire |
-| 10-11 | Microsoft.Testing.Platform, duplication | à faire |
+| 10 | Microsoft.Testing.Platform | **fait, à relire** |
+| 11 | Duplication | à faire |
 | 12 | Livraison autonome et essais du skill dans plusieurs agents | à faire |
 | 13 | Adaptateur Spec Kit | à terme |
 
@@ -81,7 +82,8 @@ fixture, sauf `basic`, `onecollectorless`, `nocollector` et `mtp` dont les sorti
 | `failingtest` | test en échec | code 3 malgré un score sous le seuil, rapport affiché, `Sign` 85,7 % / 3,0262 |
 | `deterministic` | `ContinuousIntegrationBuild` + racine source | coverlet remet les chemins réels : succès |
 | `deterministic-paths` | idem avec `DeterministicReport=true` | rapport en `/_/src/...` : code 1, message, pas de JSON |
-| `mtp` | MSTest sur Microsoft.Testing.Platform, SDK 10 | `dotnet test` refuse le projet : code 1 et message mentionnant MTP |
+| `mtp` | MSTest sur MTP avec seulement `coverlet.collector` | projet non lancé, code 1, message nommant les deux extensions utiles (étape 10) |
+| `mtp-codecoverage`, `mtp-coverlet` | MTP avec chacune des deux extensions | `Sign` 100 %, CRAP 2, code 0 (étape 10) |
 | `basic` | score égal au seuil, `<top-level statements>`, `--use-existing-coverage`, `--filter`, `--changed` hors git, entrées invalides | `Ten` = 10,00 exactement → code 2 ; top-level CC 2, 0 % ; le reste conforme |
 | `onecollectorless` | un projet de tests sans collecteur | avertissement nommant `Beta.Tests`, `Beta.Pick` à 6,00 |
 | `nocollector` | aucun projet avec collecteur | code 1, pas de JSON |
@@ -97,8 +99,8 @@ sélection vide (`--changed` sans changement → 0, `--filter` sans correspondan
 toujours `.metrics/crap.json` (il est maintenant marqué `scope.complete = false`).
 
 **Non vérifié / non fait** (voir aussi PLAN.md §6) : rapport réellement périmé de bout en bout ; `--changed` dans un vrai
-dépôt git ; correspondance partielle de chemins avec de vrais rapports ; projet sans aucun membre ; MTP avec adhésion
-au nouveau `dotnet test` (`global.json`) et les deux collecteurs MTP (étape 10) ; Linux et macOS (seul Windows 11 a servi) ;
+dépôt git ; correspondance partielle de chemins avec de vrais rapports ; projet sans aucun membre ; Linux et macOS
+(seul Windows 11 a servi) ;
 les fixtures ne sont construites qu'avec coverlet.collector 6.0.0, xunit 2.5.3 et MSTest 4.0.2. Les tests de bout en
 bout dépendent du réseau (NuGet) et de la présence des runtimes .NET 9 et 10.
 
@@ -116,6 +118,17 @@ Aucun changement de l'outil : des mesures et un test.
 **Non vérifié** : seules les constructions présentes dans les 5 fixtures sont recoupées avec CA1502 (pas les `switch`, `when`,
 `??`, `?.`, motifs `and`/`or` de §4.2) ; ReportGenerator n'a été lancé qu'à la main, une fois ; la CC de CA1502 dépend du
 SDK 10.0.401.
+
+## Ce qui a changé à l'étape 10
+
+| Changement | Fichiers |
+|---|---|
+| Détection MTP / VSTest par projet de tests et choix de la commande de couverture (`dotnet run --project … -- --coverage` ou `--coverlet`) | `Coverage/TestRunner.cs`, `Coverage/CoverageProvider.cs` |
+| Projet MTP sans extension de couverture : non lancé, avertissement, erreur si aucun rapport | `Coverage/CoverageProvider.cs` |
+| Message « aucun rapport » et message d'échec de tests généralisés (« tests failed for … ») | `Coverage/CoverageProvider.cs` |
+| 3 fixtures (`mtp`, `mtp-codecoverage`, `mtp-coverlet`) et 3 tests de bout en bout, 3 tests unitaires | `tests/fixtures`, `EndToEndTests.cs`, `CoverageProviderTests.cs` |
+
+L'auto-contrôle de l'outil sort toujours 0, sans avertissement. `--coverage-command` fonctionnait déjà avec MTP (essayé à la main).
 
 ## Usage
 
@@ -152,8 +165,9 @@ Voir PLAN.md §5. Points utiles pour relire :
 - Rapprochement par plages de lignes : approximation (voir PLAN.md §4.4), **mesurée** sur `closures` et `sameline` : un
   membre jamais appelé qui partage sa ligne avec un autre apparaît couvert.
 - Exclusion `[ExcludeFromCodeCoverage]` : **vérifiée** sur coverlet 6.0.0 (méthode, propriété, type).
-- Projets de tests sur Microsoft.Testing.Platform : **constaté** avec le SDK 10, `dotnet test` refuse le projet (code 1,
-  message). Les deux collecteurs MTP et l'adhésion par `global.json` n'ont pas été essayés (étape 10).
+- Projets de tests sur Microsoft.Testing.Platform : pris en charge avec `Microsoft.Testing.Extensions.CodeCoverage` ou
+  `coverlet.MTP` (lancés par `dotnet run`, voir PLAN.md §6, étape 10). Essayés seulement avec MSTest ; xunit.v3, TUnit et
+  NUnit non essayés ; des versions incompatibles entre extension et plateforme font planter le lancement.
 - `--changed` : chemins git entre guillemets (caractères non ASCII) mal décodés ; le JSON ne contient alors que les
   fichiers filtrés (il écrase le rapport complet précédent). Même chose avec `--filter`.
 - `--use-existing-coverage` prend tout fichier `*cobertura*.xml` sous la racine (hors bin/obj/.git/node_modules).
@@ -178,12 +192,12 @@ Vérifications plus anciennes (étape 4, avant les changements de l'étape 5) : 
 
 ## Reste à faire
 
-Voir la feuille de route (PLAN.md §6). Étapes 6 et 7 faites, à relire ; prochaine étape : **8** (skill), ou 10 (MTP) selon la relecture.
+Voir la feuille de route (PLAN.md §6). Étapes 6, 7 et 10 faites, à relire ; prochaine étape : **8** (skill et README).
 
 ## Comment vérifier
 
 ```bash
-dotnet test                                                     # 155 réussis, 15 ignorés
+dotnet test                                                     # 158 réussis, 15 ignorés
 dotnet publish src/CrapSharp -o ./out
 dotnet ./out/CrapSharp.dll . --threshold 10                     # lance les tests avec couverture, doit sortir 0
 ```
@@ -191,7 +205,7 @@ dotnet ./out/CrapSharp.dll . --threshold 10                     # lance les test
 Tests de bout en bout (lents, réseau NuGet) :
 
 ```bash
-CRAPSHARP_E2E=1 dotnet test --filter Category=EndToEnd          # 14 tests + 5 cas de l'oracle de complexité
+CRAPSHARP_E2E=1 dotnet test --filter Category=EndToEnd          # 21 cas attendus
 ```
 
 Environnement : Windows 11, SDK .NET 10.0.401, runtime 10.0.12.

@@ -23,8 +23,8 @@ public sealed class CoverageProvider(IProcessRunner processes, TextWriter error)
     private const int LinesOfFailureOutput = 15;
 
     private const string NoReportFromDotnetTest =
-        "dotnet test produced no coverage report. The test projects need the coverlet.collector package; "
-        + "projects running on Microsoft.Testing.Platform are not supported yet (use --coverage-command)";
+        "The test run produced no coverage report. VSTest projects need the coverlet.collector package; "
+        + "Microsoft.Testing.Platform projects need Microsoft.Testing.Extensions.CodeCoverage or coverlet.MTP";
 
     public CoverageResult Obtain(Options options, Workspace workspace) => options.Mode switch
     {
@@ -62,12 +62,16 @@ public sealed class CoverageProvider(IProcessRunner processes, TextWriter error)
     /// <summary>True when the run failed.</summary>
     private bool RunTestProject(string project, string resultsDirectory, string root)
     {
+        var runner = TestRunners.Of(File.ReadAllText(project));
+        if (runner == TestRunner.MtpWithoutCoverage)
+        {
+            error.WriteLine($"warning: {Path.GetFileName(project)} uses Microsoft.Testing.Platform but references neither "
+                + "Microsoft.Testing.Extensions.CodeCoverage nor coverlet.MTP, so it cannot write a Cobertura report; not run");
+            return false;
+        }
         error.WriteLine($"Running tests with coverage: {Path.GetFileName(project)}");
-        var result = processes.Run(
-            "dotnet",
-            ["test", project, "--collect:XPlat Code Coverage", "--results-directory", resultsDirectory],
-            root);
-        return WarnIfFailed(result, $"dotnet test failed for {Path.GetFileName(project)}");
+        var result = processes.Run("dotnet", TestRunners.Arguments(runner, project, resultsDirectory), root);
+        return WarnIfFailed(result, $"tests failed for {Path.GetFileName(project)}");
     }
 
     private CoverageResult RunCommand(string command, Workspace workspace)

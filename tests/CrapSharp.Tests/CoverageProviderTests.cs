@@ -67,7 +67,7 @@ public class CoverageProviderTests
         Assert.True(result.Succeeded);
         Assert.True(result.RunFailed);
         Assert.Equal(0.5, result.Map!.CoverageOf(source, 6, 7));
-        Assert.Contains("dotnet test failed for App.Tests.csproj (exit 1)", errors);
+        Assert.Contains("tests failed for App.Tests.csproj (exit 1)", errors);
         Assert.Contains("some test output", errors);
     }
 
@@ -225,6 +225,60 @@ public class CoverageProviderTests
         Assert.True(result.Succeeded);
         Assert.Contains("warning: Other.Tests.csproj produced no coverage report", errors);
         Assert.DoesNotContain("App.Tests.csproj produced no coverage report", errors);
+    }
+
+    private static (TempWorkspace Workspace, string Source, string Project) MtpSolution(string packages)
+    {
+        var ws = new TempWorkspace();
+        var (source, _) = ws.CreateSolution();
+        File.Delete(ws.Path_("tests/App.Tests/App.Tests.csproj"));
+        var project = ws.Write("tests/App.Tests/App.Tests.csproj",
+            "<Project><PropertyGroup><OutputType>Exe</OutputType><EnableMSTestRunner>true</EnableMSTestRunner></PropertyGroup>"
+            + $"<ItemGroup><PackageReference Include=\"MSTest\" Version=\"4.0.2\" />{packages}</ItemGroup></Project>");
+        return (ws, source, project);
+    }
+
+    [Theory]
+    [InlineData("<PackageReference Include=\"Microsoft.Testing.Extensions.CodeCoverage\" Version=\"18.1.0\" />",
+        "--coverage", "--coverage-output-format")]
+    [InlineData("<PackageReference Include=\"coverlet.MTP\" Version=\"10.1.0\" />",
+        "--coverlet", "--coverlet-output-format")]
+    public void AMicrosoftTestingPlatformProjectIsRunWithItsOwnCoverageExtension(string packages, string enable, string format)
+    {
+        var (ws, source, project) = MtpSolution(packages);
+        using var _ = ws;
+        var runner = new FakeProcessRunner((_, args, _) =>
+        {
+            var report = Path.Combine(ArgAfter(args, "--results-directory"), "x.cobertura.xml");
+            Directory.CreateDirectory(Path.GetDirectoryName(report)!);
+            File.WriteAllText(report, TempWorkspace.CoberturaXml(source, (6, 1), (7, 0)));
+            return new ProcessResult(0, "", "");
+        });
+
+        var (result, _) = Obtain(new Options(ws.Root, []), ProjectDiscovery.Discover(ws.Root), runner);
+
+        var call = Assert.Single(runner.Calls);
+        Assert.Equal("dotnet", call.File);
+        // `dotnet run` works on every SDK, unlike `dotnet test` which needs an opt-in in global.json on .NET 10.
+        Assert.Equal(["run", "--project", project, "--", enable, format, "cobertura"], call.Arguments[..7]);
+        Assert.True(result.Succeeded);
+        Assert.Equal(0.5, result.Map!.CoverageOf(source, 6, 7));
+    }
+
+    [Fact]
+    public void AMicrosoftTestingPlatformProjectWithoutACoverageExtensionIsNamedAndNotRun()
+    {
+        var (ws, _, _) = MtpSolution("");
+        using var _ = ws;
+        var runner = new FakeProcessRunner();
+
+        var (result, errors) = Obtain(new Options(ws.Root, []), ProjectDiscovery.Discover(ws.Root), runner);
+
+        Assert.False(result.Succeeded);
+        Assert.Empty(runner.Calls);
+        Assert.Contains("App.Tests.csproj uses Microsoft.Testing.Platform", errors);
+        Assert.Contains("Microsoft.Testing.Extensions.CodeCoverage", errors);
+        Assert.Contains("coverlet.MTP", errors);
     }
 
     [Fact]

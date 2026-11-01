@@ -147,17 +147,33 @@ public class EndToEndTests
     }
 
     [EndToEndFact]
-    public void AMicrosoftTestingPlatformProjectIsReportedAsUnsupportedNotScoredAtZero()
+    public void AMicrosoftTestingPlatformProjectWithoutACoverageExtensionIsNamedNotScoredAtZero()
     {
         using var fixture = FixtureCopy.Of("mtp");
 
         var run = fixture.Run("--threshold", "10");
 
-        // On the .NET 10 SDK, `dotnet test` refuses an MTP project that did not opt in (VSTest target): no report.
+        // Only coverlet.collector (a VSTest data collector) is referenced: it does nothing under Microsoft.Testing.Platform.
         Assert.Equal(1, run.ExitCode);
-        Assert.Contains("Microsoft.Testing.Platform", run.Error);
+        Assert.Contains("Lib.Tests.csproj uses Microsoft.Testing.Platform", run.Error);
+        Assert.Contains("Microsoft.Testing.Extensions.CodeCoverage", run.Error);
         Assert.Empty(run.Output);
         Assert.False(run.HasJson);
+    }
+
+    [EndToEndTheory]
+    [InlineData("mtp-codecoverage")]
+    [InlineData("mtp-coverlet")]
+    public void AMicrosoftTestingPlatformProjectIsScoredThroughItsCoverageExtension(string fixtureName)
+    {
+        using var fixture = FixtureCopy.Of(fixtureName);
+
+        var run = fixture.Run("--threshold", "10");
+
+        // Sign: CC 2, both branches run, every line hit: CRAP 2. Run with `dotnet run`, no global.json opt-in needed.
+        Assert.Equal(0, run.ExitCode);
+        AssertEntry(run.EntryOf("Rules.Sign(int)"), 2, 100, 2);
+        Assert.Single(run.CoverageReports());
     }
 
     [EndToEndFact]

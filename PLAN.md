@@ -45,7 +45,7 @@ capables d'accéder au dépôt et d'exécuter les outils. L'intégration Spec Ki
 | B | Skill portable (discipline ub-mode + `crapsharp` + **Stryker.NET** pour les mutations), packaging | à faire |
 | C | Contrôle de duplication : choix, intégration et validation | à faire |
 | D | Distribution et essai de bout en bout : CLI/CI autonomes, skill utilisable par plusieurs agents | à faire |
-| E | Adaptateur Spec Kit, sans dépendance du cœur à Spec Kit | à terme |
+| E | Adaptateur Spec Kit prêt à installer, sans dépendance du cœur à Spec Kit | à terme |
 
 Pour les mutations, on utilise **Stryker.NET** tel quel, un outil existant et mature : pas de réécriture.
 
@@ -57,7 +57,7 @@ Pour les mutations, on utilise **Stryker.NET** tel quel, un outil existant et ma
 3. **Tests** : tests unitaires xUnit, plus des tests de bout en bout sur de vraies mini-solutions avec coverlet.
 4. **Contrôle de duplication** utilisable depuis le skill et en CI, avec un verdict reproductible.
 5. **Guide d'usage autonome** : installation, CLI, CI et skill pour les environnements d'agent vérifiés.
-6. À terme : **adaptateur Spec Kit** et exemple exécutable sur un vrai projet .NET.
+6. À terme : **adaptateur Spec Kit prêt à installer** et exemple exécutable sur un vrai projet .NET.
 
 ## 4. Conventions de mesure (spécification)
 
@@ -175,7 +175,7 @@ src/CrapSharp/                 net10.0, RollForward=Major, Roslyn (Microsoft.Cod
   Coverage/                    CoberturaParser, CoverageMap, CoverageReportFinder, CoverageProvider
   Scoring/                     CrapCalculator, MethodReport, ReportFormatter, JsonReportWriter, ReportContext, ThresholdCheck, Truncation
   Projects/ProjectDiscovery.cs, Git/ChangedFiles.cs, Processes/ (IProcessRunner, SystemProcessRunner)
-tests/CrapSharp.Tests/         xUnit (155 tests rapides + 14 de bout en bout, voir étape 6), FakeProcessRunner, TempWorkspace
+tests/CrapSharp.Tests/         xUnit (158 tests rapides + 21 cas de bout en bout, voir étape 6), FakeProcessRunner, TempWorkspace
 tests/CrapSharp.Tests/EndToEnd/ outil publié lancé sur tests/fixtures (CRAPSHARP_E2E=1)
 tests/fixtures/                mini-solutions réelles ; projets stockés en *.csproj.template
 skill/<nom>/SKILL.md           phase B
@@ -194,10 +194,10 @@ skill/<nom>/SKILL.md           phase B
 | 7 | Validation indépendante des scores attendus sur les fixtures ; comparaison complémentaire avec ReportGenerator et évaluation de son éventuelle réutilisation | **fait, à relire** |
 | 8 | Skill portable (phase B) : discipline ub-mode pour .NET, `crapsharp`, Stryker.NET ; politique d'exécution des mutations ; README | à faire |
 | 9 | Packaging `dotnet tool` (`PackAsTool`, `ToolCommandName=crapsharp`), installation locale et commandes du skill vérifiées | à faire |
-| 10 | Support des projets sur Microsoft.Testing.Platform (si l'étape 6 confirme le problème) | à faire |
+| 10 | Support des projets sur Microsoft.Testing.Platform (si l'étape 6 confirme le problème) | **fait, à relire** |
 | 11 | Contrôle de duplication (phase C) : choisir entre un outil existant (ex. jscpd) et une brique Roslyn, puis l'intégrer et le valider | à faire |
 | 12 | Essai de livraison (phase D) : installation reproductible, CLI/CI, skill dans plusieurs agents et pilote sur un projet .NET réel | à faire |
-| 13 | Adaptateur Spec Kit (phase E) : constitution, workflow et exemple de projet | à terme |
+| 13 | Adaptateur Spec Kit (phase E) prêt à installer : skill, règles de constitution, contrôles du workflow et exemple de projet | à terme |
 
 **Étape 6 en détail.** Des mini-solutions dans `tests/fixtures/`, chacune avec un vrai projet de tests et coverlet.
 L'outil généré par **`dotnet publish`** est lancé dessus (pas `dotnet run`, qui verrouille la DLL sous Windows), et on vérifie le tableau,
@@ -275,8 +275,25 @@ valeurs (CC, lignes, CRAP brut, code de sortie) ont été retrouvées telles que
 
 **Reste de la liste de l'étape 6, non couvert de bout en bout** : un rapport réellement périmé (seul le test
 unitaire existe) ; `--changed` dans un vrai dépôt git (sélection vide, fichier modifié) ; une correspondance partielle de
-chemins (testée seulement avec des rapports écrits à la main) ; un projet sans aucun membre ; Microsoft.Testing.Platform
-avec adhésion explicite au nouveau `dotnet test` (voir §7, étape 10).
+chemins (testée seulement avec des rapports écrits à la main) ; un projet sans aucun membre.
+
+**Étape 10 — Microsoft.Testing.Platform (MTP).** Un projet de tests est reconnu comme MTP par son fichier projet
+(`EnableMSTestRunner`, `UseMicrosoftTestingPlatformRunner`, `TestingPlatformDotnetTestSupport`, `MSTest.Sdk`, `xunit.v3`,
+`TUnit`) ; l'extension de couverture est lue dans ses références de paquets :
+
+| Références du projet de tests | Commande lancée par l'outil (mode par défaut) |
+|---|---|
+| VSTest (cas général) | `dotnet test <proj> --collect:"XPlat Code Coverage" --results-directory <dir>` |
+| MTP + `Microsoft.Testing.Extensions.CodeCoverage` | `dotnet run --project <proj> -- --coverage --coverage-output-format cobertura --results-directory <dir>` |
+| MTP + `coverlet.MTP` | idem avec `--coverlet --coverlet-output-format cobertura` |
+| MTP sans l'une de ces extensions (même avec `coverlet.collector`) | projet **non lancé**, avertissement qui nomme les deux paquets ; erreur (code 1) si aucun projet ne produit de rapport |
+
+`dotnet run` plutôt que `dotnet test` : avec le SDK 10, `dotnet test` refuse un projet MTP sans adhésion dans `global.json` (et
+demande `--project`), alors que `dotnet run` fonctionne sans configuration. Constaté sur les fixtures `mtp-codecoverage`
+(MSTest 4.0.2 + CodeCoverage 18.1.0) et `mtp-coverlet` (MSTest 4.5.2 + coverlet.MTP 10.1.0) : `Sign` CC 2, 100 %, CRAP 2.
+Les versions comptent : CodeCoverage 18.12 (qui exige la plateforme 2.5) avec MSTest 4.0.2 (plateforme 2.0.2) plante au
+démarrage (`MissingMethodException`) ; l'outil rapporte alors l'échec du lancement (code 3 ou 1), il ne le corrige pas.
+Non essayé : xunit.v3, TUnit, NUnit sous MTP ; Linux et macOS.
 
 **Ordre retenu** : on valide la mesure (6, 7) avant de figer le skill (8), parce que le skill s'appuie sur des chiffres
 qu'il faut pouvoir croire. Le skill peut toutefois être rédigé en parallèle, car il dépend peu des détails de l'outil.
@@ -305,11 +322,14 @@ commande exacte dans le skill. Vérifier le temps d'exécution et les faux posit
 - décider séparément si un plugin est nécessaire pour distribuer le skill dans ChatGPT web/mobile. Cette distribution
   ne conditionne pas l'usage de la CLI et du skill dans les hôtes locaux déjà vérifiés.
 
-**Étape 13 — adaptation à Spec Kit.** Sur un projet pilote utilisant Spec Kit, inscrire les règles de qualité dans la
-constitution, invoquer le skill pendant l'implémentation et fournir un exemple d'extension ou d'overlay qui lance
-les contrôles après `implement` ([extensions](https://github.github.io/spec-kit/reference/extensions.html),
-[workflows](https://github.github.io/spec-kit/reference/workflows.html)). Vérifier les résultats et les codes de
-sortie dans ce contexte. L'adaptateur réutilise les commandes de l'étape 12 ; le cœur ne dépend pas de Spec Kit.
+**Étape 13 — adaptation à Spec Kit.** Fournir un paquet ou une procédure d'installation reproductible pour un projet
+qui utilise déjà Spec Kit : rendre le skill disponible dans l'agent choisi, proposer les règles de qualité pour la
+constitution et enregistrer les contrôles à lancer après `implement`. Préférer une extension ou un overlay installable
+à une simple copie manuelle d'instructions ([extensions](https://github.github.io/spec-kit/reference/extensions.html),
+[workflows](https://github.github.io/spec-kit/reference/workflows.html)). Sur un projet pilote propre, suivre la
+procédure publiée, vérifier que l'agent peut invoquer le skill, que les commandes s'exécutent et qu'un échec bloque
+le workflow ou la CI comme prévu. L'adaptateur réutilise le skill et les commandes de l'étape 12 ; le cœur ne dépend
+pas de Spec Kit et ses instructions ne sont pas dupliquées dans l'adaptateur.
 
 **Critère de valeur ajoutée.** À l'étape 7 puis sur un pilote, comparer trois situations : (1) IA + Spec Kit avec sa
 configuration initiale ; (2) IA + Spec Kit configuré pour la qualité .NET avec ReportGenerator, Stryker.NET et l'outil
@@ -337,11 +357,11 @@ attendre de trancher tous les points avant de commencer l'étape 6.
 | 8, 12 | Règle de mutation Stryker.NET : quand lancer le contrôle et quel verdict rend la CI rouge | Séparer le retour rapide du contrôle potentiellement long ; documenter la commande, le seuil retenu et un cas d'échec attendu. |
 | 9, 12 | Identifiant et version du package, mode de distribution, licence du projet | Tester au moins un manifeste `dotnet tool` depuis une copie propre ; décider ensuite de la publication NuGet. Fournir une licence explicite avant toute diffusion publique. |
 | 6, 12 | `--changed` / `--filter` et `.metrics/crap.json` | **Partiel** : métadonnées `scope.complete` ajoutées (§4.6) ; un rapport partiel écrase toujours le fichier. Reste à décider d'un second fichier, et à vérifier les consommateurs (skill). |
-| 10 | Support Microsoft.Testing.Platform | Tester `Microsoft.Testing.Extensions.CodeCoverage` (`--coverage --coverage-output-format cobertura`) et `coverlet.MTP` (`--coverlet --coverlet-output-format cobertura`) ; intégrer la voie retenue ou documenter la limite ([documentation .NET](https://learn.microsoft.com/en-us/dotnet/core/testing/microsoft-testing-platform-code-coverage)). |
+| 10 | Support Microsoft.Testing.Platform | **Fait** (voir §6, étape 10). Tester `Microsoft.Testing.Extensions.CodeCoverage` (`--coverage --coverage-output-format cobertura`) et `coverlet.MTP` (`--coverlet --coverlet-output-format cobertura`) ; intégrer la voie retenue ou documenter la limite ([documentation .NET](https://learn.microsoft.com/en-us/dotnet/core/testing/microsoft-testing-platform-code-coverage)). |
 | 11 | Détecteur de duplication, seuil, exclusions et coût | Comparer un outil existant (ex. jscpd) à une brique Roslyn sur des exemples C# ; le rang `0,8` de dryer n'est pas directement transférable (§6). |
 | 12 | Hôtes testés pour le skill et niveau de support promis | Vérifier au minimum Claude Code et Codex / ChatGPT avec accès au dépôt et à la CLI ; publier une matrice « testé / documenté / non pris en charge ». Un skill seul ne donne pas accès à un shell. |
 | 12 ou plus tard | Distribution du skill dans ChatGPT web/mobile | Décider si un plugin est utile ; l'usage CLI/CI et les hôtes locaux ne dépendent pas de cette option. |
-| 13 | Forme de l'adaptateur Spec Kit | Choisir extension, overlay de workflow ou simple guide sur le pilote ; conserver les mêmes commandes CLI que hors Spec Kit. |
+| 13 | Forme de l'adaptateur Spec Kit | Choisir extension ou overlay installable selon les possibilités vérifiées sur le pilote ; une seule procédure publiée doit rendre le skill et les contrôles disponibles, sans recopier les instructions à la main. |
 
 L'export EDN compatible `uml-viewer` reste hors périmètre, sauf demande explicite.
 
@@ -389,7 +409,7 @@ Texte complet dans [REVIEWS.md](REVIEWS.md).
 | Codex, Claude | Périmètre : CRAP seulement ≠ ub-mode | **Intégré** : phases A, B, C (§2) |
 | Codex | Le skill doit pousser vers des tests de comportement, pas des tests artificiels | **Retenu** pour l'étape 8 |
 | Codex | Compatibilité uml-viewer | Hors périmètre (§7.5) |
-| Claude | Microsoft.Testing.Platform incompatible avec `--collect` | **Constaté** (fixture `mtp`, SDK 10) : `dotnet test` refuse le projet, code 1 avec message ; support à l'étape 10 |
+| Claude | Microsoft.Testing.Platform incompatible avec `--collect` | **Constaté puis corrigé** (étape 10) : projets MTP lancés par `dotnet run` avec `--coverage` ou `--coverlet` ; sans extension, avertissement et code 1 |
 | Codex 3 | Un rapport partiel ou une seule cible peut produire un gate trompeur ; `NewestPerRun` ne garde qu'un rapport par projet | **Confirmé puis corrigé** : sur `multitarget`, un rapport était perdu (6,00 au lieu de 2,00) ; tous les rapports d'un run sont lus. Projet de tests sans rapport : avertissement (§4.4) |
 | Codex 3 | ReportGenerator expose CRAP mais ne recalcule pas les métriques fournies | **Confirmé** : il relit la CC IL de coverlet ; oracle indépendant = CA1502 (étape 7) |
 | Codex 3 | Seuil CLI non fini, modes concurrents, JSON tronqué et périmètre implicite | **Corrigé** (étape 6) : seuil fini > 0, sources de couverture exclusives, valeur manquante, `crapRaw`, `scope`, `coverage`, sélection vide (§4.4 à 4.6) |
