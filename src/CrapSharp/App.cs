@@ -135,8 +135,6 @@ public sealed class App(IProcessRunner processes, TextWriter output, TextWriter 
     private bool CheckCoverage(IReadOnlyList<MethodComplexity> methods, Workspace workspace, CoverageMap coverage)
     {
         var files = methods.Select(method => method.FilePath).Distinct(PathComparison.Comparer).ToList();
-        if (files.Count == 0)
-            return true;
         var missing = files.Where(file => !coverage.Contains(file)).ToList();
         if (missing.Count == files.Count)
         {

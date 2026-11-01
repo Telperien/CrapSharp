@@ -227,6 +227,32 @@ hôtes n'a été essayé : c'est écrit tel quel.
 **Reste de l'étape 12** : essai réel du skill dans Claude Code et Codex / ChatGPT (de ton côté) ; un pilote sur un projet qui n'est pas le
 nôtre.
 
+## Mutations sur CrapSharp lui-même (après l'étape 12)
+
+Stryker.NET 5.0.0 lancé par l'utilisateur sur le dépôt : 440 mutants testés, 375 tués, 65 survivants (+ 10 sans couverture), score 83,33 %.
+Les 75 mutants non tués ont été classés (rapport HTML lu par un script) :
+
+| Famille | Exemples | Traitement |
+|---|---|---|
+| Sortie et messages | en-tête et colonnes du tableau, JSON indenté, messages d'erreur et d'avertissement, annonces « Running… » | tests qui fixent le texte exact |
+| Ordre stable | fichiers, projets, rapports triés par ordre ordinal ; égalités départagées par nom | tests d'ordre |
+| Bornes | rapport écrit pile au début, pile 10 min avant le plus récent | tests aux bornes |
+| Processus | sortie standard et erreur capturées, exécutable introuvable (127), script `cmd` / `sh -c` | tests avec un vrai processus et des appels simulés |
+| Résolution des rapports Cobertura | source vide, `hits` absent, classe sans fichier, dossier source qui contient le fichier | tests |
+| Divers | décisions de plusieurs instructions de niveau supérieur, projet imbriqué, `.csproj` passé en argument, obsolescence jugée sur le plus récent rapport, jamais en mode lancement | tests |
+| Code mort | `if (files.Count == 0) return true;` dans `CheckCoverage`, atteint plus jamais depuis « aucun membre » | **supprimé** |
+| Équivalents ou inatteignables, laissés | `CoverageProvider` message « No coverage report given » (la liste n'est jamais vide), `ChangedFiles` bornes `>= 3` et `arrow >= 0`, `ProjectDiscovery` `Except` → `Concat` (les fichiers des tests sont exclus ensuite), `MemberNaming` valeurs de repli `"?"`, `CoverageReportFinder` repli `""` | non traités |
+
+Tests ajoutés : 22 dans `OutputAndOrderTests.cs`, 6 dans `CoverageProviderTests`, 4 dans `AppTests` : 194 tests rapides.
+
+**Résultat mesuré** (Stryker.NET 5.0.0, lancé deux fois après les tests) : de 375 tués / 65 survivants / 10 sans couverture
+(**83,33 %**) à **435 tués / 9 survivants / 5 sans couverture (96,88 %)**, 60 s, code 0. Les 14 mutants restants ont tous été
+examinés et laissés : mutants équivalents (`ChangedFiles` bornes sur des lignes de trois caractères ou une flèche en tête, `Except` → `Concat`
+dans `ProjectDiscovery`, format `"0"` de `ReportFormatter` pour un nombre déjà entier, repli `""` de `CoverageReportFinder`), code inatteignable
+(`"No coverage report given"`, replis `"?"` de `MemberNaming`) ou dépendant du système (`PathComparison` : le mutant « toujours insensible à la casse »
+est identique sur Windows et ne se tue que sous Linux ; `sh -c` n'est exécuté que sous Linux, où la CI le teste).
+Le score ne mesure que `src/CrapSharp` ; les tests de bout en bout ne sont pas joués par Stryker (ignorés sans `CRAPSHARP_E2E`).
+
 ## Usage
 
 ```bash
@@ -294,7 +320,7 @@ Voir la feuille de route (PLAN.md §6). Étapes 6, 7, 8 (rédigée) et 10 faites
 ## Comment vérifier
 
 ```bash
-dotnet test                                                     # 162 réussis, 20 ignorés
+dotnet test                                                     # 194 réussis, 21 ignorés
 dotnet publish src/CrapSharp -o ./out
 dotnet ./out/CrapSharp.dll . --threshold 10                     # lance les tests avec couverture, doit sortir 0
 ```

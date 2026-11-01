@@ -357,4 +357,60 @@ public class AppTests
         Assert.Equal(1, outcome.ExitCode);
         Assert.Contains("--changed needs a git repository", outcome.Error);
     }
+
+    [Fact]
+    public void StalenessIsJudgedAgainstTheNewestReportOfSeveral()
+    {
+        using var ws = new TempWorkspace();
+        var (source, _) = ws.CreateSolution();
+        var oldReport = ws.Write("tests/App.Tests/TestResults/g/coverage.cobertura.xml", TempWorkspace.CoberturaXml(source, (6, 1), (7, 0)));
+        var newReport = ws.Write("tests/App.Tests/TestResults/h/coverage.cobertura.xml", TempWorkspace.CoberturaXml(source, (6, 1), (7, 0)));
+        var now = DateTime.UtcNow;
+        File.SetLastWriteTimeUtc(oldReport, now.AddMinutes(-9));
+        File.SetLastWriteTimeUtc(source, now.AddMinutes(-5));
+        File.SetLastWriteTimeUtc(newReport, now);
+
+        var outcome = Run(new Options(ws.Root, [], UseExistingCoverage: true), new FakeProcessRunner());
+
+        Assert.DoesNotContain("may be stale", outcome.Error);
+    }
+
+    [Fact]
+    public void ReportsProducedByThisRunAreNeverCalledStale()
+    {
+        using var ws = new TempWorkspace();
+        var (source, _) = ws.CreateSolution();
+        File.SetLastWriteTimeUtc(source, DateTime.UtcNow.AddHours(1));
+
+        var outcome = Run(new Options(ws.Root, []), CoveringRunner(source));
+
+        Assert.DoesNotContain("may be stale", outcome.Error);
+    }
+
+    [Fact]
+    public void TheUnmatchedReportErrorExplainsWhereToLook()
+    {
+        using var ws = new TempWorkspace();
+        ws.CreateSolution();
+        var report = ws.Write("cov.xml", TempWorkspace.CoberturaXml("/_/src/App/Calc.cs", (6, 1)));
+
+        var outcome = Run(new Options(ws.Root, [report]), new FakeProcessRunner());
+
+        Assert.Contains("Check that the report paths match the sources (deterministic builds can write /_/ paths).", outcome.Error);
+    }
+
+    [Fact]
+    public void ASourceWrittenAtTheSameInstantAsTheReportIsNotStale()
+    {
+        using var ws = new TempWorkspace();
+        var (source, _) = ws.CreateSolution();
+        var report = ws.Write("tests/App.Tests/TestResults/g/coverage.cobertura.xml", TempWorkspace.CoberturaXml(source, (6, 1), (7, 0)));
+        var instant = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        File.SetLastWriteTimeUtc(report, instant);
+        File.SetLastWriteTimeUtc(source, instant);
+
+        var outcome = Run(new Options(ws.Root, [], UseExistingCoverage: true), new FakeProcessRunner());
+
+        Assert.DoesNotContain("may be stale", outcome.Error);
+    }
 }

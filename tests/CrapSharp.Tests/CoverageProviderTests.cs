@@ -313,4 +313,110 @@ public class CoverageProviderTests
         if (OperatingSystem.IsWindows())
             Assert.False(File.Exists(runner.Calls.Single().Arguments.Last()));
     }
+
+    [Fact]
+    public void TestsAreRunWithTheirResultsUnderMetricsCoverageAndAnnounced()
+    {
+        using var ws = new TempWorkspace();
+        var (source, _) = ws.CreateSolution();
+        var runner = TestRunnerWriting(source);
+
+        var (_, errors) = Obtain(new Options(ws.Root, []), ProjectDiscovery.Discover(ws.Root), runner);
+
+        var results = ArgAfter(runner.Calls.Single().Arguments, "--results-directory");
+        Assert.Equal(Path.Combine(ws.Root, ".metrics", "coverage", "0"), results);
+        Assert.Contains("Running tests with coverage: App.Tests.csproj", errors);
+    }
+
+    [Fact]
+    public void TheRunIsFlaggedFailedWhenSeveralTestProjectsFail()
+    {
+        using var ws = new TempWorkspace();
+        var (source, _) = ws.CreateSolution();
+        ws.Write("tests/Other.Tests/Other.Tests.csproj", "<Project><ItemGroup><PackageReference Include=\"Microsoft.NET.Test.Sdk\" /></ItemGroup></Project>");
+        var runner = TestRunnerWriting(source, exitCode: 1);
+
+        var (result, _) = Obtain(new Options(ws.Root, []), ProjectDiscovery.Discover(ws.Root), runner);
+
+        Assert.Equal(2, runner.Calls.Count);
+        Assert.True(result.RunFailed);
+    }
+
+    [Fact]
+    public void ASilentTestProjectWarningExplainsTheZeroPercent()
+    {
+        var (ws, source, _) = MtpSolution("<PackageReference Include=\"coverlet.MTP\" Version=\"10.1.0\" />");
+        using var _ = ws;
+        ws.Write("tests/Silent.Tests/Silent.Tests.csproj", "<Project><ItemGroup><PackageReference Include=\"Microsoft.NET.Test.Sdk\" /></ItemGroup></Project>");
+        var runner = new FakeProcessRunner((_, args, _) =>
+        {
+            if (args.Any(a => a.EndsWith("Silent.Tests.csproj")))
+                return new ProcessResult(0, "", "");
+            var report = Path.Combine(ArgAfter(args, "--results-directory"), "x.cobertura.xml");
+            Directory.CreateDirectory(Path.GetDirectoryName(report)!);
+            File.WriteAllText(report, TempWorkspace.CoberturaXml(source, (6, 1)));
+            return new ProcessResult(0, "", "");
+        });
+
+        var (_, errors) = Obtain(new Options(ws.Root, []), ProjectDiscovery.Discover(ws.Root), runner);
+
+        Assert.Contains("warning: Silent.Tests.csproj produced no coverage report; what only its tests cover is scored 0 %", errors);
+    }
+
+    [Fact]
+    public void AMicrosoftTestingPlatformProjectWithoutAnExtensionIsNotRunAndIsNotAFailedRun()
+    {
+        var (ws, source, _) = MtpSolution("");
+        using var _ = ws;
+        ws.Write("tests/Plain.Tests/Plain.Tests.csproj", "<Project><ItemGroup><PackageReference Include=\"Microsoft.NET.Test.Sdk\" /></ItemGroup></Project>");
+        var runner = TestRunnerWriting(source);
+
+        var (result, errors) = Obtain(new Options(ws.Root, []), ProjectDiscovery.Discover(ws.Root), runner);
+
+        Assert.True(result.Succeeded);
+        Assert.False(result.RunFailed);
+        Assert.Contains("cannot write a Cobertura report; not run", errors);
+        Assert.DoesNotContain("Running tests with coverage: App.Tests.csproj", errors);
+    }
+
+    [Fact]
+    public void ACoverageCommandIsAnnouncedAndMustLeaveAReport()
+    {
+        using var ws = new TempWorkspace();
+
+        var (result, errors) = Obtain(new Options(ws.Root, [], CoverageCommand: "my-cover"), new Workspace(ws.Root, [], []), new FakeProcessRunner());
+
+        Assert.False(result.Succeeded);
+        Assert.Contains("Running coverage command: my-cover", errors);
+        Assert.Contains("The coverage command produced no Cobertura report", errors);
+    }
+
+    [Fact]
+    public void TheCoverageCommandReachesTheShellOfTheOperatingSystemUnchanged()
+    {
+        using var ws = new TempWorkspace();
+        string? script = null;
+        var runner = new FakeProcessRunner((_, args, _) =>
+        {
+            if (OperatingSystem.IsWindows())
+                script = File.ReadAllText(args.Last());
+            return new ProcessResult(0, "", "");
+        });
+
+        Obtain(new Options(ws.Root, [], CoverageCommand: "my-cover --all"), new Workspace(ws.Root, [], []), runner);
+
+        var call = Assert.Single(runner.Calls);
+        if (OperatingSystem.IsWindows())
+        {
+            Assert.Equal("cmd", call.File);
+            Assert.Equal("/c", call.Arguments[0]);
+            Assert.Equal("@echo off\r\nmy-cover --all\r\n", script);
+        }
+        else
+        {
+            Assert.Equal("sh", call.File);
+            Assert.Equal(["-c", "my-cover --all"], call.Arguments);
+        }
+        Assert.Equal(ws.Root, call.WorkingDirectory);
+    }
 }
