@@ -3,7 +3,7 @@
 > Fichier destiné à la **review par une autre IA ou un humain**. Mis à jour à chaque étape.
 > Objectif, conventions de mesure et feuille de route : [PLAN.md](PLAN.md). Reviews : [REVIEWS.md](REVIEWS.md).
 > Dernière mise à jour : 2026-11-01 — étapes 1 à 12 faites (la 12 en partie), premier jet de l'adaptateur Spec Kit (13), licence MIT, CI Linux et
-> Windows verte, tag `v0.1.0-preview.1` posé (publication NuGet en cours de validation, non vérifiée). Les commits sont sur `main`.
+> Windows verte, `0.1.0-preview.1` publié sur NuGet. Les commits sont sur `main`.
 
 ## Résumé de l'état
 
@@ -14,7 +14,7 @@
 | 6 | Fixtures réelles et tests de bout en bout | **fait, à relire** (manques listés plus bas) |
 | 7 | Oracle de complexité indépendant et comparaison avec ReportGenerator | **fait, à relire** |
 | 8 | Skill complet (discipline ub-mode, `crapsharp`, Stryker.NET) + README | **rédigé, à relire** |
-| 9 | Packaging `dotnet tool` | **fait en local** ; métadonnées, README et workflow NuGet préparés, publication non faite |
+| 9 | Packaging `dotnet tool` | **fait** ; `0.1.0-preview.1` publié sur NuGet |
 | 10 | Microsoft.Testing.Platform | **fait, à relire** |
 | 11 | Duplication | **jscpd adopté** (provisoire), à relire |
 | 12 | Livraison autonome et essais du skill dans Claude Code, Codex et GitHub Copilot (VS Code) | **en cours** : CI faite ; Claude Code et Codex essayés une fois (chargement automatique constaté, discipline de Codex dans son bac à sable à confirmer) ; Copilot et pilote externe à faire |
@@ -465,3 +465,11 @@ l'absence de tout test de `Untouched`**, pas par l'astuce du skill) et jscpd (0 
 la porte **non verte** et n'a rien modifié, car on ne lui demandait qu'un rapport. À ma demande suivante, il a ajouté un test de bornes de `Untouched`
 (15 tests verts), CRAP 2,00, Stryker 100 % (3 tués), et a dit ne pas avoir relancé jscpd. Le comportement est celui voulu : verdict honnête, correction
 seulement sur demande. **Non vérifié** : le déclenchement par le hook `after_implement`, Codex et les autres agents.
+
+## Publication NuGet
+
+`CrapSharp 0.1.0-preview.1` est publié sur NuGet (publication de confiance par le workflow `publish-nuget.yml`, déclenché par une GitHub Release en
+préversion sur le tag `v0.1.0-preview.1`). Vérifié par moi : l'API NuGet liste la version, et `dotnet tool install CrapSharp --tool-path <dossier vide>
+--version 0.1.0-preview.1` l'installe depuis nuget.org (sans source locale) et `crapsharp --help` répond. Rapporté par l'utilisateur, non rejoué par moi :
+un essai fonctionnel avec Codex. README, guide d'installation et skill installent maintenant depuis NuGet (le skill se copie encore depuis une copie du dépôt).
+**Non vérifié** : macOS, installation globale (`-g`), `dotnet tool restore` depuis un manifeste sur une autre machine.

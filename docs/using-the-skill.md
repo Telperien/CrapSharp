@@ -11,17 +11,16 @@ and the agent must say so instead of claiming a result.
 
 ## Install in another .NET repository (Windows PowerShell)
 
-Use a separate CrapSharp checkout as the source. Replace the two paths below, then run these commands from the target
-repository's root. Skip `dotnet new tool-manifest` if the target already has a local tool manifest. If either tool is already in
-that manifest, skip its `dotnet tool install` command.
+The tool comes from NuGet; the skill folder is copied from a CrapSharp checkout (the skill is not distributed as a package).
+Replace the two paths below, then run these commands from the target repository's root. Skip `dotnet new tool-manifest` if the
+target already has a local tool manifest. If either tool is already in that manifest, skip its `dotnet tool install` command.
 
 ```powershell
 $crapSharpCheckout = 'C:\path\to\CrapSharp'
 $targetRepository = 'C:\path\to\OtherProject'
-dotnet pack (Join-Path $crapSharpCheckout 'src/CrapSharp/CrapSharp.csproj') -c Release -o (Join-Path $crapSharpCheckout 'nupkg')
 Set-Location $targetRepository
 dotnet new tool-manifest
-dotnet tool install CrapSharp --version 0.1.0-preview.1 --add-source (Join-Path $crapSharpCheckout 'nupkg')
+dotnet tool install CrapSharp --version 0.1.0-preview.1
 dotnet tool install dotnet-stryker --version 5.0.0
 New-Item -ItemType Directory -Force '.agents/skills' | Out-Null
 Copy-Item -LiteralPath (Join-Path $crapSharpCheckout 'skill/dotnet-craft') -Destination '.agents/skills/dotnet-craft' -Recurse
@@ -33,10 +32,8 @@ folder to `.claude/skills/dotnet-craft/`. In the target repository, keep the loc
 version control once the pilot succeeds. Do not add another `dotnet-craft` copy under `.github/skills/` when Copilot already reads
 the `.agents/skills/` copy.
 
-The package is not published on NuGet. A colleague or CI runner cannot restore CrapSharp from the manifest alone: they also
-need the built package from a reachable source and must run `dotnet tool restore --add-source <package-directory>`. Replace the
-local folder with a published NuGet feed when CrapSharp is released. Verify installation separately from a real CRAP gate: the
-latter also needs a supported coverage collector in the target project.
+`0.1.0-preview.1` is published on NuGet, so a colleague or CI runner restores CrapSharp with `dotnet tool restore`. Verify
+installation separately from a real CRAP gate: the latter also needs a supported coverage collector in the target project.
 
 ## Claude Code
 
@@ -130,5 +127,5 @@ The Windows example above builds and installs both local .NET tools. On another 
 | Other Copilot surfaces | **not tried**; support must be checked separately |
 | ChatGPT web and mobile | not supported without a plugin; a skill without a shell cannot run the gates |
 
-Not covered anywhere: installation from NuGet (the package is not published), global tool installation (`-g`), and a pilot on a
-project other than this repository.
+Installation from NuGet (`0.1.0-preview.1`, Windows) was checked from an empty directory, and reported working by a Codex run
+on a project of its own. Not covered anywhere: global tool installation (`-g`) and a pilot on a project other than this repository.

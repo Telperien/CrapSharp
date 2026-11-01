@@ -9,14 +9,15 @@ the same checks while changing code. It is a .NET counterpart of the discipline 
 
 ## Quick start
 
-To install the preview when it appears on [NuGet.org](https://www.nuget.org/packages/CrapSharp):
+Install the preview from [NuGet.org](https://www.nuget.org/packages/CrapSharp):
 
 ```bash
 dotnet tool install --global CrapSharp --version 0.1.0-preview.1
 crapsharp . --threshold 10
 ```
 
-If the package is not listed yet, pack and install the tool locally from a CrapSharp checkout:
+For a repository-local installation, shared through a tool manifest (`dotnet crapsharp`), or to build from source, pack and
+install the tool from a CrapSharp checkout:
 
 ```bash
 dotnet pack src/CrapSharp -c Release -o ./nupkg
@@ -25,8 +26,8 @@ dotnet tool install CrapSharp --version 0.1.0-preview.1 --add-source ./nupkg
 dotnet crapsharp . --threshold 10
 ```
 
-Run these commands from the CrapSharp checkout. To install it in another repository, give `--add-source` the absolute path to
-the package directory. The [skill installation guide](https://github.com/Telperien/CrapSharp/blob/main/docs/using-the-skill.md)
+Run these commands from the CrapSharp checkout. In another repository, `dotnet new tool-manifest` then
+`dotnet tool install CrapSharp --version 0.1.0-preview.1` installs it from NuGet (no `--add-source`). The [skill installation guide](https://github.com/Telperien/CrapSharp/blob/main/docs/using-the-skill.md)
 gives the full cross-repository procedure.
 
 Here is the output for the repository's `basic` fixture (with coverage). The first method is fully covered but still reaches
