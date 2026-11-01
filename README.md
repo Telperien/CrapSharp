@@ -51,6 +51,10 @@ empty selection), **2** threshold not met, **3** tests or coverage command faile
 The JSON holds `scope` (complete or partial report), `coverage` (the reports used) and, per method, the score truncated for
 display (`crap`) and the exact score compared with the threshold (`crapRaw`).
 
+## Using the skill
+
+Installation in Claude Code and Codex, and a table of what has and has not been tested: [docs/using-the-skill.md](docs/using-the-skill.md).
+
 ## Mutation testing
 
 Mutations are left to [Stryker.NET](https://stryker-mutator.io/), without rewriting it; the procedure is in
