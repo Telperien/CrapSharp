@@ -39,6 +39,18 @@ jobs:
         run: npx --yes jscpd@5.4.2 src --format csharp --min-tokens 50 --min-lines 3 --threshold 0 --ignore "**/bin/**,**/obj/**"
 
       - name: End-to-end tests
-        run: dotnet test --configuration Release --filter Category=EndToEnd
+        run: dotnet test --configuration Release --filter Category=EndToEnd --logger "trx;LogFileName=e2e.trx" --results-directory e2e-results
         env:
           CRAPSHARP_E2E: "1"
+
+      # Shows how long each end-to-end test took as annotations of the run.
+      - name: Report end-to-end durations
+        if: always()
+        shell: python
+        run: |
+          import glob, re
+          import xml.etree.ElementTree as ET
+          for trx in glob.glob("e2e-results/*.trx"):
+              ns = {"t": "http://microsoft.com/schemas/VisualStudio/TeamTest/2010"}
+              for r in ET.parse(trx).getroot().iterfind(".//t:UnitTestResult", ns):
+                  print("::notice::%s %s %s" % (r.get("duration"), r.get("outcome"), r.get("testName")[-90:]))
