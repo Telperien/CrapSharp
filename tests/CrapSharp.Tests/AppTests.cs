@@ -1,0 +1,239 @@
+using CrapSharp.Processes;
+using Xunit;
+
+namespace CrapSharp.Tests;
+
+public class AppTests
+{
+    private sealed record Outcome(int ExitCode, string Output, string Error, FakeProcessRunner Runner);
+
+    private static Outcome Run(Options options, FakeProcessRunner runner)
+    {
+        var output = new StringWriter();
+        var error = new StringWriter();
+        var exit = new App(runner, output, error).Run(options);
+        return new Outcome(exit, output.ToString(), error.ToString(), runner);
+    }
+
+    // The fake `dotnet test` reports line 6 hit and line 7 missed: Sign() is 50 % covered, CC 2, CRAP 2.5.
+    private static FakeProcessRunner CoveringRunner(string source, int exitCode = 0) => new((_, args, _) =>
+    {
+        var index = args.ToList().IndexOf("--results-directory");
+        var report = Path.Combine(args[index + 1], "g", "coverage.cobertura.xml");
+        Directory.CreateDirectory(Path.GetDirectoryName(report)!);
+        File.WriteAllText(report, TempWorkspace.CoberturaXml(source, (6, 1), (7, 0)));
+        return new ProcessResult(exitCode, "", "");
+    });
+
+    private static Outcome RunArgs(params string[] args)
+    {
+        var output = new StringWriter();
+        var error = new StringWriter();
+        var runner = new FakeProcessRunner();
+        var exit = new App(runner, output, error).Run(args);
+        return new Outcome(exit, output.ToString(), error.ToString(), runner);
+    }
+
+    [Fact]
+    public void ARunPrintsTheTableAndWritesTheJson()
+    {
+        using var ws = new TempWorkspace();
+        var (source, _) = ws.CreateSolution();
+
+        var outcome = Run(new Options(ws.Root, []), CoveringRunner(source));
+
+        Assert.Equal(0, outcome.ExitCode);
+        Assert.Contains("App.Calc.Sign(int)", outcome.Output);
+        Assert.Contains("50%", outcome.Output);
+        Assert.DoesNotContain("Generated", outcome.Output);
+        Assert.True(File.Exists(ws.Path_(".metrics/crap.json")));
+    }
+
+    [Fact]
+    public void NoCoverageShowsComplexityOnlyAndLaunchesNothing()
+    {
+        using var ws = new TempWorkspace();
+        ws.CreateSolution();
+
+        var outcome = Run(new Options(ws.Root, [], NoCoverage: true), new FakeProcessRunner());
+
+        Assert.Equal(0, outcome.ExitCode);
+        Assert.Contains("App.Calc.Sign(int)", outcome.Output);
+        Assert.Empty(outcome.Runner.Calls);
+        Assert.False(File.Exists(ws.Path_(".metrics/crap.json")));
+    }
+
+    [Theory]
+    [InlineData(2.0, 2)]
+    [InlineData(2.5, 2)]
+    [InlineData(2.6, 0)]
+    public void ThresholdGivesExitCodeTwoUnlessEveryScoreIsBelowIt(double threshold, int expected)
+    {
+        using var ws = new TempWorkspace();
+        var (source, _) = ws.CreateSolution();
+
+        var outcome = Run(new Options(ws.Root, [], threshold), CoveringRunner(source));
+
+        Assert.Equal(expected, outcome.ExitCode);
+        Assert.Equal(expected == 2, outcome.Error.Contains("threshold not met"));
+    }
+
+    [Fact]
+    public void FailingTestsStillPrintTheReportButGiveExitCodeThree()
+    {
+        using var ws = new TempWorkspace();
+        var (source, _) = ws.CreateSolution();
+
+        var outcome = Run(new Options(ws.Root, []), CoveringRunner(source, exitCode: 1));
+
+        Assert.Equal(3, outcome.ExitCode);
+        Assert.Contains("App.Calc.Sign(int)", outcome.Output);
+        Assert.Contains("incomplete coverage", outcome.Error);
+    }
+
+    [Fact]
+    public void FailingTestsWinOverAThresholdNotMet()
+    {
+        using var ws = new TempWorkspace();
+        var (source, _) = ws.CreateSolution();
+
+        var outcome = Run(new Options(ws.Root, [], Threshold: 1), CoveringRunner(source, exitCode: 1));
+
+        Assert.Equal(3, outcome.ExitCode);
+        Assert.Contains("threshold not met", outcome.Error);
+    }
+
+    [Fact]
+    public void ACoverageReportThatMentionsNoAnalyzedFileIsFlagged()
+    {
+        using var ws = new TempWorkspace();
+        ws.CreateSolution();
+        var report = ws.Write("cov.xml", TempWorkspace.CoberturaXml("/_/src/App/Calc.cs", (6, 1)));
+
+        var outcome = Run(new Options(ws.Root, [report]), new FakeProcessRunner());
+
+        Assert.Equal(1, outcome.ExitCode);
+        Assert.Contains("none of the 1 analyzed file(s) appears in the coverage report", outcome.Error);
+        Assert.Empty(outcome.Output);
+        Assert.False(File.Exists(ws.Path_(".metrics/crap.json")));
+    }
+
+    [Fact]
+    public void AnUncoveredProductionProjectIsWarnedAndItsMethodsScoreZeroCoverage()
+    {
+        using var ws = new TempWorkspace();
+        var (source, _) = ws.CreateSolution();
+        ws.Write("src/Unused/Unused.csproj", "<Project Sdk=\"Microsoft.NET.Sdk\"></Project>");
+        ws.Write("src/Unused/Other.cs", "namespace Unused; class Other { int Value() => 1; }");
+        var report = ws.Write("cov.xml", TempWorkspace.CoberturaXml(source, (6, 1), (7, 0)));
+
+        var outcome = Run(new Options(ws.Root, [report], Threshold: 10), new FakeProcessRunner());
+
+        Assert.Equal(0, outcome.ExitCode);
+        Assert.Contains("Unused.Other.Value()", outcome.Output);
+        Assert.Contains("0%", outcome.Output);
+        Assert.Contains("Unused.csproj", outcome.Error);
+        Assert.Contains("warning:", outcome.Error);
+    }
+
+    [Fact]
+    public void ACoverageReportThatMentionsTheSourcesIsNotFlagged()
+    {
+        using var ws = new TempWorkspace();
+        var (source, _) = ws.CreateSolution();
+
+        var outcome = Run(new Options(ws.Root, []), CoveringRunner(source));
+
+        Assert.DoesNotContain("none of the", outcome.Error);
+    }
+
+    [Fact]
+    public void HelpPrintsTheUsageAndRunsNothing()
+    {
+        var outcome = RunArgs("--help");
+        Assert.Equal(0, outcome.ExitCode);
+        Assert.Contains("Usage: crapsharp", outcome.Output);
+        Assert.Empty(outcome.Runner.Calls);
+    }
+
+    [Fact]
+    public void ABadCommandLineIsAnErrorThatPointsToTheHelp()
+    {
+        var outcome = RunArgs("--verbose");
+        Assert.Equal(1, outcome.ExitCode);
+        Assert.Contains("Unknown option: --verbose", outcome.Error);
+        Assert.Contains("--help", outcome.Error);
+        Assert.Empty(outcome.Runner.Calls);
+    }
+
+    [Fact]
+    public void ThresholdWithNoCoverageIsRejectedBeforeAnythingRuns()
+    {
+        var outcome = Run(new Options(Path.GetTempPath(), [], 10, NoCoverage: true), new FakeProcessRunner());
+        Assert.Equal(1, outcome.ExitCode);
+        Assert.Contains("--threshold needs coverage", outcome.Error);
+        Assert.Empty(outcome.Runner.Calls);
+    }
+
+    [Fact]
+    public void AMissingPathIsAnError()
+    {
+        var outcome = Run(new Options("does-not-exist-anywhere", []), new FakeProcessRunner());
+        Assert.Equal(1, outcome.ExitCode);
+        Assert.Contains("Path not found", outcome.Error);
+    }
+
+    [Fact]
+    public void FailedCoverageStopsTheRunWithExitCodeOne()
+    {
+        using var ws = new TempWorkspace();
+        ws.CreateSolution();
+
+        var outcome = Run(new Options(ws.Root, []), new FakeProcessRunner());
+
+        Assert.Equal(1, outcome.ExitCode);
+        Assert.Empty(outcome.Output);
+    }
+
+    [Fact]
+    public void FilterKeepsOnlyMatchingFilesWhateverTheSeparator()
+    {
+        using var ws = new TempWorkspace();
+        ws.CreateSolution();
+        ws.Write("src/App/Other.cs", "class Other { void M() { } }");
+
+        var outcome = Run(new Options(ws.Root, [], NoCoverage: true, Filter: "App\\Calc"), new FakeProcessRunner());
+
+        Assert.Contains("Calc.Sign", outcome.Output);
+        Assert.DoesNotContain("Other.M", outcome.Output);
+    }
+
+    [Fact]
+    public void ChangedKeepsOnlyFilesGitReports()
+    {
+        using var ws = new TempWorkspace();
+        ws.CreateSolution();
+        ws.Write("src/App/Other.cs", "class Other { void M() { } }");
+        var git = new FakeProcessRunner((_, args, _) => args[0] == "rev-parse"
+            ? new ProcessResult(0, ws.Root + "\n", "")
+            : new ProcessResult(0, " M src/App/Other.cs\n", ""));
+
+        var outcome = Run(new Options(ws.Root, [], NoCoverage: true, Changed: true), git);
+
+        Assert.Contains("Other.M", outcome.Output);
+        Assert.DoesNotContain("Calc.Sign", outcome.Output);
+    }
+
+    [Fact]
+    public void ChangedOutsideAGitRepositoryIsAnError()
+    {
+        using var ws = new TempWorkspace();
+        ws.CreateSolution();
+        var git = new FakeProcessRunner((_, _, _) => new ProcessResult(128, "", "fatal: not a git repository"));
+
+        var outcome = Run(new Options(ws.Root, [], NoCoverage: true, Changed: true), git);
+
+        Assert.Equal(1, outcome.ExitCode);
+        Assert.Contains("--changed needs a git repository", outcome.Error);
+    }
+}
