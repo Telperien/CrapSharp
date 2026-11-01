@@ -5,6 +5,13 @@ on:
   pull_request:
   workflow_dispatch:
 
+env:
+  # Build servers left alive after a build (MSBuild nodes, the Roslyn compiler server) can keep the output of the process
+  # that started them open and delay its exit; the end-to-end tests start many builds.
+  MSBUILDDISABLENODEREUSE: "1"
+  UseSharedCompilation: "false"
+  DOTNET_CLI_USE_MSBUILD_SERVER: "0"
+
 jobs:
   checks:
     name: ${{ matrix.os }}
