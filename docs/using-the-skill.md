@@ -128,4 +128,6 @@ The Windows example above builds and installs both local .NET tools. On another 
 | ChatGPT web and mobile | not supported without a plugin; a skill without a shell cannot run the gates |
 
 Installation from NuGet (`0.1.0-preview.1`, Windows) was checked from an empty directory, and reported working by a Codex run
-on a project of its own. Not covered anywhere: global tool installation (`-g`) and a pilot on a project other than this repository.
+on a project of its own. A Codex run also scored a real project ("My-Story", two test projects) with coverage, as reported to the
+author: no missing-report warning, `.metrics/crap.json` written, worst method CC 25 at 0 % coverage (CRAP 650). Not covered anywhere:
+global tool installation (`-g`), and a controlled pilot that records durations, false positives and the gate's exit code.

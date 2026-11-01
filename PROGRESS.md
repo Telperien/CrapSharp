@@ -473,3 +473,11 @@ préversion sur le tag `v0.1.0-preview.1`). Vérifié par moi : l'API NuGet list
 --version 0.1.0-preview.1` l'installe depuis nuget.org (sans source locale) et `crapsharp --help` répond. Rapporté par l'utilisateur, non rejoué par moi :
 un essai fonctionnel avec Codex. README, guide d'installation et skill installent maintenant depuis NuGet (le skill se copie encore depuis une copie du dépôt).
 **Non vérifié** : macOS, installation globale (`-g`), `dotnet tool restore` depuis un manifeste sur une autre machine.
+
+## Premier essai du paquet NuGet sur un projet réel (rapporté par l'utilisateur)
+
+Codex a lancé CrapSharp (installé depuis NuGet) sur « My-Story », un projet de l'utilisateur avec deux projets de test : mode complexité seule puis mode avec
+couverture. Rapporté : les deux projets de test ont tourné, la couverture a été récupérée, plus d'avertissement de rapport absent, `.metrics/crap.json`
+écrit. Pire score : `PublicMetadataController.Share`, CC 25, couverture 0 %, CRAP 650 (conforme à la formule : 25² × 1 + 25). **Non rapporté, donc inconnu** :
+durée, code de sortie du gate, faux positifs ou méthodes mal rapprochées, et ce que Codex a fait ensuite (tests, simplification). Je n'ai pas vu la sortie
+complète ni le projet.
