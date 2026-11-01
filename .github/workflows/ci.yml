@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  checks:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      # 9.0.x is only needed by the multi-target fixture used by the end-to-end tests.
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            9.0.x
+            10.0.x
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Fast tests
+        run: dotnet test --configuration Release
+
+      - name: CRAP gate on this repository (the tool scores itself)
+        run: |
+          dotnet publish src/CrapSharp -c Release -o out
+          dotnet out/CrapSharp.dll . --threshold 10
+
+      - name: Duplication gate on the production sources
+        run: npx --yes jscpd@5.4.2 src --format csharp --min-tokens 50 --min-lines 3 --threshold 0 --ignore "**/bin/**,**/obj/**"
+
+      - name: End-to-end tests
+        run: dotnet test --configuration Release --filter Category=EndToEnd
+        env:
+          CRAPSHARP_E2E: "1"
