@@ -24,7 +24,7 @@
     <RepositoryUrl>https://github.com/Telperien/CrapSharp</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
-    <PackageReleaseNotes>Initial preview: per-method CRAP gate, Cobertura coverage, changed-file selection and JSON output.</PackageReleaseNotes>
+    <PackageReleaseNotes>Initial preview: per-method CRAP gate, Cobertura coverage (VSTest and Microsoft.Testing.Platform), --changed and --changed-since selection, --filter and --exclude, JSON output.</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>
