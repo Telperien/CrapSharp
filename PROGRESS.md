@@ -219,8 +219,13 @@ Linux comme sur Windows. Le mécanisme exact (qui attend quoi) n'est pas établi
 - `dotnet stryker --project CrapSharp.csproj --break-at 50` depuis `tests/CrapSharp.Tests` : 612 mutants, 375 tués, 65 survivants,
   10 sans couverture, **score 83,33 %**, 55 s, code 0. Les 65 survivants n'ont pas été examinés : ils sont une piste d'amélioration des tests.
 
-**Reste de l'étape 12** : essai du skill dans Claude Code et Codex / ChatGPT (de ton côté) ; un pilote sur un projet qui n'est pas le
-nôtre ; matrice « testé / documenté / non pris en charge » .
+**Guide et matrice** : `docs/using-the-skill.md` (en anglais) donne les dossiers d'installation et l'invocation pour Claude Code
+(`.claude/skills/<nom>/SKILL.md`) et Codex (`.agents/skills/<nom>/SKILL.md`), tirés des pages officielles lues par un sous-agent ; la page
+Claude Code était tronquée et en partie résumée. Le tableau « testé / documenté / non pris en charge » y figure aussi. Aucun des deux
+hôtes n'a été essayé : c'est écrit tel quel.
+
+**Reste de l'étape 12** : essai réel du skill dans Claude Code et Codex / ChatGPT (de ton côté) ; un pilote sur un projet qui n'est pas le
+nôtre.
 
 ## Usage
 
